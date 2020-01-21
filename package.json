@@ -1,0 +1,30 @@
+{
+	"name": "banireader",
+	"version": "0.0.1",
+	"description": "BaniReader simple reader",
+	"main": "src/index.html",
+	"scripts": {
+	  "build": "tsc"
+	},
+	"browserslist": [
+	  "last 2 Chrome versions",
+	  "last 2 ChromeAndroid versions",
+	  "last 2 Firefox versions"
+	],
+	"repository": {
+	  "type": "git",
+	  "url": "git+https://github.com/msssk/banireader.git"
+	},
+	"keywords": [
+	  "shabad",
+	  "sabd",
+	  "kirtan",
+	  "gurbani"
+	],
+	"author": "Mangala Sadhu Sangeet Singh Khalsa",
+	"license": "ISC",
+	"bugs": {
+	  "url": "https://github.com/msssk/banireader/issues"
+	},
+	"homepage": "https://github.com/msssk/banireader"
+  }
