@@ -1,9 +1,3 @@
-const nextKeys = new Set([
-    'ArrowDown',
-    'ArrowRight',
-    'PageDown',
-    ' ',
-]);
 function parseApiLine(apiLine) {
     let line = apiLine.verse.gurmukhi;
     if (apiLine.shabadId !== this.state.currentShabadId) {
@@ -23,11 +17,6 @@ export class Reader {
             lineCache: [],
             renderedPages: new Array(3),
         };
-        this._onKeyDown = (event) => {
-            if (nextKeys.has(event.key)) {
-                this.gotoNextPage();
-            }
-        };
         this._rootNode = rootNode;
         this._pageNodes = [];
         this._sizingNode = document.createElement('section');
@@ -36,7 +25,6 @@ export class Reader {
         this._pageNodes.push(this._sizingNode.cloneNode());
         this._pageNodes.push(this._sizingNode.cloneNode());
         this._pageNodes.push(this._sizingNode.cloneNode());
-        document.addEventListener('keydown', this._onKeyDown);
         this._loadState();
     }
     async render() {
@@ -68,6 +56,18 @@ export class Reader {
         this._rootNode.appendChild(currentPageNode);
         await this._renderPage(2);
         this.state.isNavigating = false;
+    }
+    gotoPreviousPage() {
+        if (this.state.isNavigating || this.state.displayedPage === 0) {
+            return;
+        }
+        const currentPageNode = this._pageNodes[1];
+        currentPageNode.classList.remove('currentPage');
+        this._rootNode.removeChild(currentPageNode);
+        const previousPageNode = this._pageNodes[0];
+        previousPageNode.classList.add('currentPage');
+        this._rootNode.appendChild(previousPageNode);
+        this.state.displayedPage = 0;
     }
     _loadState() {
         const stateJson = localStorage.getItem(this.storageKey);

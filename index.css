@@ -1,3 +1,10 @@
+:root {
+	--main-font-size: 42px;
+	--current-page-font-size: 42px;
+	--main-line-height: 63px;
+	--current-page-line-height: 63px;
+}
+
 @font-face {
 	font-family: 'GurbaniAkharHeavy';
 	src: local('GurbaniAkharHeavy'),
@@ -22,8 +29,8 @@ html {
 	color: hsl(217, 50%, 63%);
 	cursor: none;
 	font-family: 'GurbaniAkharHeavy';
-	font-size: 42px;
-	line-height: 1.5em;
+	font-size: var(--main-font-size);
+	line-height: var(--main-line-height);
 	white-space: nowrap;
 	height: 100%;
 	width: 100%;
@@ -37,5 +44,7 @@ html {
 }
 
 .currentPage {
+	font-size: var(--current-page-font-size);
+	line-height: var(--current-page-line-height);
 	z-index: 1;
 }
