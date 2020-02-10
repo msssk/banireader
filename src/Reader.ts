@@ -1,12 +1,5 @@
 import { ApiPageInfo, ApiPageLine } from './api.js';
 
-const nextKeys = new Set([
-	'ArrowDown',
-	'ArrowRight',
-	'PageDown',
-	' ',
-]);
-
 function parseApiLine (this: Reader, apiLine: ApiPageLine) {
 	let line = apiLine.verse.gurmukhi;
 	if (apiLine.shabadId !== this.state.currentShabadId) {
@@ -76,8 +69,6 @@ export class Reader {
 		this._pageNodes.push(this._sizingNode.cloneNode() as HTMLElement);
 		this._pageNodes.push(this._sizingNode.cloneNode() as HTMLElement);
 
-		document.addEventListener('keydown', this._onKeyDown);
-
 		this._loadState();
 	}
 
@@ -117,6 +108,22 @@ export class Reader {
 		await this._renderPage(2);
 
 		this.state.isNavigating = false;
+	}
+
+	gotoPreviousPage () {
+		if (this.state.isNavigating || this.state.displayedPage === 0) {
+			return;
+		}
+
+		const currentPageNode = this._pageNodes[1];
+		currentPageNode.classList.remove('currentPage');
+		this._rootNode.removeChild(currentPageNode);
+
+		const previousPageNode = this._pageNodes[0];
+		previousPageNode.classList.add('currentPage');
+		this._rootNode.appendChild(previousPageNode);
+
+		this.state.displayedPage = 0;
 	}
 
 	protected _loadState () {
@@ -179,11 +186,5 @@ export class Reader {
 		this.state.currentPage += 1;
 
 		return apiResponse.json();
-	}
-
-	protected _onKeyDown = (event: KeyboardEvent) => {
-		if (nextKeys.has(event.key)) {
-			this.gotoNextPage();
-		}
 	}
 }
