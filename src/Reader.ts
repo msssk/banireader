@@ -182,6 +182,10 @@ export class Reader {
 	}
 
 	protected async _getNextPage (): Promise<ApiPageInfo> {
+		// Siri Guru Granth Sahib
+		// https://api.banidb.com/v2/angs/1200/G
+		// Dasm Granth
+		// https://api.banidb.com/v2/angs/1200/D
 		const apiResponse = await fetch(`https://api.banidb.com/v2/angs/${this.state.currentPage}/D`);
 		this.state.currentPage += 1;
 

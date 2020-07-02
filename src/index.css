@@ -26,7 +26,7 @@ html {
 
 #main {
 	background-color: hsl(197, 52%, 11%);
-	color: hsl(217, 50%, 63%);
+	color: hsl(217, 33%, 67%); /* hsl(217, 50%, 63%); */
 	cursor: none;
 	font-family: 'GurbaniAkharHeavy';
 	font-size: var(--main-font-size);
