@@ -1,23 +1,19 @@
+const MAX_RENDERED_PAGES = 3;
 function parseApiLine(apiLine) {
     let line = apiLine.verse.gurmukhi;
-    if (apiLine.shabadId !== this.state.currentShabadId) {
-        this.state.currentShabadId = apiLine.shabadId;
+    if (apiLine.shabadId !== this.config.currentShabadId) {
+        this.config.currentShabadId = apiLine.shabadId;
         line = `<br><center>${line}</center>`;
     }
     return line;
 }
 export class Reader {
-    constructor(rootNode) {
-        this.storageKey = 'banireader';
+    constructor(rootNode, options) {
         this.state = {
-            currentPage: 1,
-            currentShabadId: undefined,
-            displayedPage: 1,
             isNavigating: false,
-            lineCache: [],
-            renderedPages: new Array(3),
         };
         this._rootNode = rootNode;
+        this.config = options.config;
         this._pageNodes = [];
         this._sizingNode = document.createElement('section');
         this._sizingNode.className = 'page';
@@ -25,31 +21,36 @@ export class Reader {
         this._pageNodes.push(this._sizingNode.cloneNode());
         this._pageNodes.push(this._sizingNode.cloneNode());
         this._pageNodes.push(this._sizingNode.cloneNode());
-        this._loadState();
     }
     async render() {
-        const currentPageNode = this._pageNodes[this.state.displayedPage];
+        const currentPageNode = this._pageNodes[this.config.displayedPage];
         currentPageNode.classList.add('currentPage');
         this._rootNode.appendChild(currentPageNode);
-        for (let i = this.state.displayedPage; i < this.state.renderedPages.length; i++) {
+        for (let i = this.config.displayedPage; i < MAX_RENDERED_PAGES; i++) {
             await this._renderPage(i);
         }
+    }
+    async gotoPage(pageNumber) {
+        this.config.renderedPages = [];
+        this.config.currentPage = pageNumber;
+        this.render();
     }
     async gotoNextPage() {
         if (this.state.isNavigating) {
             return;
         }
         this.state.isNavigating = true;
-        const previousPageNode = this._pageNodes[this.state.displayedPage];
-        if (this.state.displayedPage === 0) {
-            this.state.displayedPage = 1;
+        const previousPageNode = this._pageNodes[this.config.displayedPage];
+        if (this.config.displayedPage === 0) {
+            this.config.displayedPage = 1;
         }
         else {
             this._pageNodes.push(this._pageNodes.shift());
-            this.state.renderedPages.push(this.state.renderedPages.shift());
-            this.state.renderedPages[2] = '';
+            this.config.renderedPages.push(this.config.renderedPages.shift());
+            this.config.renderedPages[2] = '';
+            this.config.renderedPages = [...this.config.renderedPages];
         }
-        const currentPageNode = this._pageNodes[this.state.displayedPage];
+        const currentPageNode = this._pageNodes[this.config.displayedPage];
         previousPageNode.classList.remove('currentPage');
         currentPageNode.classList.add('currentPage');
         this._rootNode.removeChild(previousPageNode);
@@ -58,7 +59,7 @@ export class Reader {
         this.state.isNavigating = false;
     }
     gotoPreviousPage() {
-        if (this.state.isNavigating || this.state.displayedPage === 0) {
+        if (this.state.isNavigating || this.config.displayedPage === 0) {
             return;
         }
         const currentPageNode = this._pageNodes[1];
@@ -67,25 +68,15 @@ export class Reader {
         const previousPageNode = this._pageNodes[0];
         previousPageNode.classList.add('currentPage');
         this._rootNode.appendChild(previousPageNode);
-        this.state.displayedPage = 0;
-    }
-    _loadState() {
-        const stateJson = localStorage.getItem(this.storageKey);
-        Object.assign(this.state, JSON.parse(stateJson));
-    }
-    _saveState() {
-        requestAnimationFrame(() => {
-            const stateJson = JSON.stringify(this.state);
-            localStorage.setItem(this.storageKey, stateJson);
-        });
+        this.config.displayedPage = 0;
     }
     async _renderPage(pageIndex) {
-        let pageHtml = this.state.renderedPages[pageIndex];
+        let pageHtml = this.config.renderedPages[pageIndex];
         if (!pageHtml) {
             const lines = await this._getNextPageLines();
             pageHtml = lines.join('<wbr> ');
-            this.state.renderedPages[pageIndex] = pageHtml;
-            this._saveState();
+            this.config.renderedPages[pageIndex] = pageHtml;
+            this.config.renderedPages = [...this.config.renderedPages];
         }
         this._pageNodes[pageIndex].innerHTML = pageHtml;
     }
@@ -100,21 +91,33 @@ export class Reader {
             this._sizingNode.innerHTML += ` ${line}<wbr>`;
         }
         if (this._sizingNode.offsetHeight > this._rootNode.offsetHeight) {
-            this.state.lineCache.unshift(lines.pop());
+            this.config.lineCache.unshift(lines.pop());
+            this.config.lineCache = [...this.config.lineCache];
+        }
+        if (this._sizingNode.offsetWidth > this._rootNode.offsetWidth) {
+            this._reportUnsupportedBrowser();
+            return [];
         }
         this._sizingNode.innerHTML = '';
         return lines;
     }
     async _getNextLine() {
-        if (!this.state.lineCache.length) {
+        if (!this.config.lineCache.length) {
             const pageInfo = await this._getNextPage();
-            this.state.lineCache = pageInfo.page.map(parseApiLine, this);
+            this.config.lineCache = pageInfo.page.map(parseApiLine, this);
         }
-        return this.state.lineCache.shift();
+        const nextLine = this.config.lineCache.shift();
+        this.config.lineCache = [...this.config.lineCache];
+        return nextLine;
     }
     async _getNextPage() {
-        const apiResponse = await fetch(`https://api.banidb.com/v2/angs/${this.state.currentPage}/D`);
-        this.state.currentPage += 1;
+        const apiResponse = await fetch(`https://api.banidb.com/v2/angs/${this.config.currentPage}/${this.config.source}`);
+        this.config.currentPage += 1;
         return apiResponse.json();
+    }
+    _reportUnsupportedBrowser() {
+        this._rootNode.classList.add('unsupported');
+        this._rootNode.innerHTML = `This browser does not have the necessary text rendering support.<br>Please try
+			<a href="https://www.google.com/chrome/">Google Chrome</a>`;
     }
 }
