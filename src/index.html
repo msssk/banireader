@@ -1,10 +1,31 @@
 <!doctype html>
 <html>
-	<header>
+	<head>
+		<title>Bani Reader</title>
+		<meta charset="utf-8">
 		<link rel="stylesheet" href="./index.css">
-	</header>
+	</head>
 
 	<body>
+		<div id="start">
+			<button id="source_G" class="source">
+				ਸ੍ਰੀ ਗੁਰੂ ਗ੍ਰੰਥ ਸਾਹਿਬ ਜੀ
+			</button>
+			<button id="source_D" class="source">
+				ਸ੍ਰੀ ਦਸਮ ਗ੍ਰੰਥ ਸਾਹਿਬ ਜੀ
+			</button>
+
+			<p>Type 'H' for help</p>
+		</div>
+
+		<div id="help" hidden>
+			Next page: space, right arrow, down arrow, page down
+			<br>
+			Previous page: left arrow, up arrow, page up
+			<br>
+			Goto page: <input id="gotoPage"> <button id="gotoPageButton" type="button">Go</button>
+		</div>
+
 		<main id="main"></main>
 
 		<script src="./index.js" type="module"></script>

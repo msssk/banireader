@@ -1,8 +1,6 @@
 :root {
-	--main-font-size: 42px;
-	--current-page-font-size: 42px;
-	--main-line-height: 63px;
-	--current-page-line-height: 63px;
+	--primary-font-size: 42px;
+	--primay-line-height: 63px;
 }
 
 @font-face {
@@ -24,16 +22,81 @@ html {
 	overflow: hidden;
 }
 
-#main {
+body {
 	background-color: hsl(197, 52%, 11%);
 	color: hsl(217, 33%, 67%); /* hsl(217, 50%, 63%); */
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+}
+
+#start {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding-top: 20vh;
+}
+
+.source {
+	background-color: hsl(0, 24%, 71%);
+	color: hsl(0, 40%, 35%);
+	border: 5px solid hsl(0, 33%, 64%);
+	border-radius: 12px;
+	cursor: pointer;
+	font-size: 46px;
+	font-weight: 600;
+	padding-top: 1em;
+	padding-bottom: 1em;
+	width: 20em;
+}
+
+.source:hover {
+	box-shadow: 0 0 3px 3px hsl(211, 26%, 45%);
+}
+
+.source:first-child {
+	margin-bottom: 1em;
+}
+
+#help {
+	position: absolute;
+	top: 14px;
+	right: 14px;
+	padding: 1em;
+	background-color: hsl(197, 40%, 43%);
+	color: hsl(217, 33%, 9%);
+	border: 2px solid hsl(197, 40%, 22%);
+	border-radius: 7px;
+	z-index: 1000;
+}
+
+#help input {
+	background-color: hsl(197, 40%, 60%);
+	border: 1px solid hsl(197, 40%, 22%);
+	padding: 0.3em;
+}
+
+#help button {
+	background-color: hsl(0, 24%, 71%);
+	border: 1px solid hsl(0, 33%, 64%);
+	border-radius: 3px;
+	padding: 0.3em;
+	min-width: 3em;
+}
+
+#main {
 	cursor: none;
 	font-family: 'GurbaniAkharHeavy';
-	font-size: var(--main-font-size);
-	line-height: var(--main-line-height);
+	font-size: var(--primary-font-size);
+	line-height: var(--primary-line-height);
 	white-space: nowrap;
 	height: 100%;
 	width: 100%;
+}
+
+#main.unsupported {
+	cursor: auto;
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	padding-top: 4em;
+	padding-left: 5em;
 }
 
 .page {
@@ -44,7 +107,5 @@ html {
 }
 
 .currentPage {
-	font-size: var(--current-page-font-size);
-	line-height: var(--current-page-line-height);
 	z-index: 1;
 }

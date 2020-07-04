@@ -1,44 +1,28 @@
 import { ApiPageInfo, ApiPageLine } from './api.js';
+import { Config } from './Config.js';
+import { BaniSourceData } from './interfaces.d';
+
+const MAX_RENDERED_PAGES = 3;
 
 function parseApiLine (this: Reader, apiLine: ApiPageLine) {
 	let line = apiLine.verse.gurmukhi;
-	if (apiLine.shabadId !== this.state.currentShabadId) {
-		this.state.currentShabadId = apiLine.shabadId;
+	if (apiLine.shabadId !== this.config.currentShabadId) {
+		this.config.currentShabadId = apiLine.shabadId;
 		line = `<br><center>${line}</center>`;
 	}
 	return line;
 }
 
+
+export interface ReaderOptions {
+	config: Config
+}
+
 export interface ReaderState {
-	/**
-	 * Current page within the bani
-	 */
-	currentPage: number;
-
-	/**
-	 * Id of the last fetched shabad
-	 */
-	currentShabadId?: number;
-
-	/**
-	 * Index of the currently displayed page within the pageNodes array
-	 */
-	displayedPage: 0 | 1;
-
 	/**
 	 * Guard to prevent further navigation while navigation is in progress
 	 */
 	isNavigating: boolean;
-
-	/**
-	 * Cache of fetched but not yet rendered lines
-	 */
-	lineCache: string[];
-
-	/**
-	 * Inner HTML of currently rendered pages
-	 */
-	renderedPages: string[];
 }
 
 export class Reader {
@@ -46,19 +30,16 @@ export class Reader {
 	protected _rootNode: HTMLElement;
 	protected _sizingNode: HTMLElement;
 
-	storageKey = 'banireader';
+	config: BaniSourceData & { source?: string };
+	source: string;
 
 	state = {
-		currentPage: 1,
-		currentShabadId: undefined,
-		displayedPage: 1,
 		isNavigating: false,
-		lineCache: [],
-		renderedPages: new Array(3),
 	} as ReaderState;
 
-	constructor (rootNode: HTMLElement) {
+	constructor (rootNode: HTMLElement, options: ReaderOptions) {
 		this._rootNode = rootNode;
+		this.config = options.config;
 		this._pageNodes = [];
 
 		this._sizingNode = document.createElement('section');
@@ -68,18 +49,22 @@ export class Reader {
 		this._pageNodes.push(this._sizingNode.cloneNode() as HTMLElement);
 		this._pageNodes.push(this._sizingNode.cloneNode() as HTMLElement);
 		this._pageNodes.push(this._sizingNode.cloneNode() as HTMLElement);
-
-		this._loadState();
 	}
 
 	async render () {
-		const currentPageNode = this._pageNodes[this.state.displayedPage];
+		const currentPageNode = this._pageNodes[this.config.displayedPage];
 		currentPageNode.classList.add('currentPage');
 		this._rootNode.appendChild(currentPageNode);
 
-		for (let i = this.state.displayedPage; i < this.state.renderedPages.length; i++) {
+		for (let i = this.config.displayedPage; i < MAX_RENDERED_PAGES; i++) {
 			await this._renderPage(i);
 		}
+	}
+
+	async gotoPage (pageNumber: number) {
+		this.config.renderedPages = [];
+		this.config.currentPage = pageNumber;
+		this.render();
 	}
 
 	async gotoNextPage () {
@@ -89,16 +74,17 @@ export class Reader {
 
 		this.state.isNavigating = true;
 
-		const previousPageNode = this._pageNodes[this.state.displayedPage];
-		if (this.state.displayedPage === 0) {
-			this.state.displayedPage = 1;
+		const previousPageNode = this._pageNodes[this.config.displayedPage];
+		if (this.config.displayedPage === 0) {
+			this.config.displayedPage = 1;
 		}
 		else {
 			this._pageNodes.push(this._pageNodes.shift());
-			this.state.renderedPages.push(this.state.renderedPages.shift());
-			this.state.renderedPages[2] = '';
+			this.config.renderedPages.push(this.config.renderedPages.shift());
+			this.config.renderedPages[2] = '';
+			this.config.renderedPages = [ ...this.config.renderedPages ];
 		}
-		const currentPageNode = this._pageNodes[this.state.displayedPage];
+		const currentPageNode = this._pageNodes[this.config.displayedPage];
 
 		previousPageNode.classList.remove('currentPage');
 		currentPageNode.classList.add('currentPage');
@@ -111,7 +97,7 @@ export class Reader {
 	}
 
 	gotoPreviousPage () {
-		if (this.state.isNavigating || this.state.displayedPage === 0) {
+		if (this.state.isNavigating || this.config.displayedPage === 0) {
 			return;
 		}
 
@@ -123,28 +109,16 @@ export class Reader {
 		previousPageNode.classList.add('currentPage');
 		this._rootNode.appendChild(previousPageNode);
 
-		this.state.displayedPage = 0;
-	}
-
-	protected _loadState () {
-		const stateJson = localStorage.getItem(this.storageKey);
-		Object.assign(this.state, JSON.parse(stateJson));
-	}
-
-	protected _saveState () {
-		requestAnimationFrame(() => {
-			const stateJson = JSON.stringify(this.state);
-			localStorage.setItem(this.storageKey, stateJson);
-		});
+		this.config.displayedPage = 0;
 	}
 
 	protected async _renderPage (pageIndex: number) {
-		let pageHtml = this.state.renderedPages[pageIndex];
+		let pageHtml = this.config.renderedPages[pageIndex];
 		if (!pageHtml) {
 			const lines = await this._getNextPageLines();
 			pageHtml = lines.join('<wbr> ');
-			this.state.renderedPages[pageIndex] = pageHtml;
-			this._saveState();
+			this.config.renderedPages[pageIndex] = pageHtml;
+			this.config.renderedPages = [ ...this.config.renderedPages ];
 		}
 		this._pageNodes[pageIndex].innerHTML = pageHtml;
 	}
@@ -165,30 +139,43 @@ export class Reader {
 		}
 
 		if (this._sizingNode.offsetHeight > this._rootNode.offsetHeight) {
-			this.state.lineCache.unshift(lines.pop());
+			this.config.lineCache.unshift(lines.pop());
+			this.config.lineCache = [ ...this.config.lineCache ];
 		}
+
+		if (this._sizingNode.offsetWidth > this._rootNode.offsetWidth) {
+			this._reportUnsupportedBrowser();
+
+			return [];
+		}
+
 		this._sizingNode.innerHTML = '';
 
 		return lines;
 	}
 
 	protected async _getNextLine () {
-		if (!this.state.lineCache.length) {
+		if (!this.config.lineCache.length) {
 			const pageInfo = await this._getNextPage();
-			this.state.lineCache = pageInfo.page.map(parseApiLine, this);
+			this.config.lineCache = pageInfo.page.map(parseApiLine, this);
 		}
 
-		return this.state.lineCache.shift();
+		const nextLine = this.config.lineCache.shift();
+		this.config.lineCache = [ ...this.config.lineCache ];
+
+		return nextLine;
 	}
 
 	protected async _getNextPage (): Promise<ApiPageInfo> {
-		// Siri Guru Granth Sahib
-		// https://api.banidb.com/v2/angs/1200/G
-		// Dasm Granth
-		// https://api.banidb.com/v2/angs/1200/D
-		const apiResponse = await fetch(`https://api.banidb.com/v2/angs/${this.state.currentPage}/D`);
-		this.state.currentPage += 1;
+		const apiResponse = await fetch(`https://api.banidb.com/v2/angs/${this.config.currentPage}/${this.config.source}`);
+		this.config.currentPage += 1;
 
 		return apiResponse.json();
+	}
+
+	protected _reportUnsupportedBrowser () {
+		this._rootNode.classList.add('unsupported');
+		this._rootNode.innerHTML = `This browser does not have the necessary text rendering support.<br>Please try
+			<a href="https://www.google.com/chrome/">Google Chrome</a>`;
 	}
 }

@@ -3,10 +3,18 @@ module.exports = {
 		browser: true,
 		es2020: true,
 	},
-	extends: 'eslint:recommended',
+	extends: [
+		'eslint:recommended',
+		'plugin:@typescript-eslint/eslint-recommended',
+		'plugin:@typescript-eslint/recommended',
+	],
+	parser: '@typescript-eslint/parser',
 	parserOptions: {
 		sourceType: 'module',
 	},
+	plugins: [
+		'@typescript-eslint',
+	],
 	rules: {
 		// Possible Errors
 		'no-await-in-loop': 'error',
@@ -21,7 +29,7 @@ module.exports = {
 		curly: [ 'error', 'all' ],
 		'dot-location': [ 'error', 'property' ],
 		'dot-notation': 'error',
-		eqeqeq: [ 'error', 'always', { 'null': 'ignore' } ],
+		eqeqeq: [ 'error', 'always', { null: 'ignore' } ],
 		'no-caller': 'error',
 		'no-eval': 'error',
 		'no-extend-native': 'error',
