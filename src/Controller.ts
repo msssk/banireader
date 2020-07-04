@@ -54,7 +54,11 @@ export class Controller {
 	toggleHelp () {
 		this.helpNode.hidden = !this.helpNode.hidden;
 
-		if (!this.helpNode.hidden) {
+		if (this.helpNode.hidden) {
+			document.body.classList.add('nocursor');
+		}
+		else {
+			document.body.classList.remove('nocursor');
 			this.gotoPageInput.focus();
 		}
 	}
@@ -63,6 +67,8 @@ export class Controller {
 		const element = event.target as HTMLElement;
 
 		if (element.id === 'source_G' || element.id === 'source_D') {
+			document.getElementById('start').style.display = 'none';
+
 			const source = element.id.replace('source_', '');
 			this.config = new Config({ source, storageKey: 'banireader' });
 
@@ -70,8 +76,11 @@ export class Controller {
 				this.setFontSize(this.config.fontSize);
 			}
 
+			if (this.config.showVisraam) {
+				(document.getElementById('visraamCheckbox') as HTMLInputElement).checked = true;
+			}
+
 			this.reader = new Reader(document.getElementById('main'), { config: this.config });
-			document.getElementById('start').style.display = 'none';
 			this.reader.render();
 		}
 		else if (element.id === 'gotoPageButton') {
@@ -80,6 +89,10 @@ export class Controller {
 				this.reader.gotoPage(pageNumber);
 				this.toggleHelp();
 			}
+		}
+		else if (element.id === 'visraamCheckbox') {
+			this.config.showVisraam = (element as HTMLInputElement).checked;
+			this.reader.showVisraam(this.config.showVisraam);
 		}
 	};
 
@@ -94,7 +107,9 @@ export class Controller {
 			this.setFontSize(getFontSize() + 2);
 		}
 		else if (event.key === 'h') {
-			this.toggleHelp();
+			if (this.reader) {
+				this.toggleHelp();
+			}
 		}
 		else if(previousKeys.has(event.key)) {
 			this.reader.gotoPreviousPage();

@@ -1,15 +1,33 @@
-import { ApiPageInfo, ApiPageLine } from './api.js';
 import { Config } from './Config.js';
-import { BaniSourceData } from './interfaces.d';
+import { ApiPageInfo, ApiPageLine, BaniSourceData } from './interfaces.d';
 
 const MAX_RENDERED_PAGES = 3;
 
 function parseApiLine (this: Reader, apiLine: ApiPageLine) {
 	let line = apiLine.verse.gurmukhi;
+
+	const visraamMap = apiLine.visraam.sttm.reduce((sum: any, { p, t }) => {
+		sum[p] = t;
+		return sum;
+	}, {});
+
+	line = line.split(' ').map((word, index) => {
+		if (visraamMap[index] === 'v') {
+			return `<span class="visraam-main">${word}</span><wbr>`;
+		}
+		else if (visraamMap[index] === 'y') {
+			return `<span class="visraam-yamki">${word}</span>`;
+		}
+		else {
+			return word;
+		}
+	}).join(' ');
+
 	if (apiLine.shabadId !== this.config.currentShabadId) {
 		this.config.currentShabadId = apiLine.shabadId;
 		line = `<br><center>${line}</center>`;
 	}
+
 	return line;
 }
 
@@ -52,6 +70,8 @@ export class Reader {
 	}
 
 	async render () {
+		this.showVisraam(this.config.showVisraam);
+
 		const currentPageNode = this._pageNodes[this.config.displayedPage];
 		currentPageNode.classList.add('currentPage');
 		this._rootNode.appendChild(currentPageNode);
@@ -110,6 +130,15 @@ export class Reader {
 		this._rootNode.appendChild(previousPageNode);
 
 		this.config.displayedPage = 0;
+	}
+
+	showVisraam (show: boolean) {
+		if (show) {
+			this._rootNode.classList.add('visraam');
+		}
+		else {
+			this._rootNode.classList.remove('visraam');
+		}
 	}
 
 	protected async _renderPage (pageIndex: number) {

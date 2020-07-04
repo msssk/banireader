@@ -15,15 +15,38 @@
 				ਸ੍ਰੀ ਦਸਮ ਗ੍ਰੰਥ ਸਾਹਿਬ ਜੀ
 			</button>
 
-			<p>Type 'H' for help</p>
+			<p>Choose what you want to read; while reading press <kbd>h</kbd> for help</p>
 		</div>
 
 		<div id="help" hidden>
-			Next page: space, right arrow, down arrow, page down
+			<table class="infoTable">
+				<tr>
+					<td>Next page</td>
+					<td><kbd>Space</kbd> <kbd>►</kbd> <kbd>▼</kbd> <kbd>Page Down</kbd></td>
+				</tr>
+				<tr>
+					<td>Previous page</td>
+					<td><kbd>◄</kbd> <kbd>▲</kbd> <kbd>Page Up</kbd></td>
+				</tr>
+				<tr>
+					<td>Increase/decrease<br>font size</td>
+					<td><kbd>+</kbd> / <kbd>-</kbd></td>
+				</tr>
+			</table>
+
+			<label><input id="textColorInput" type="color"> Text color</label>
 			<br>
-			Previous page: left arrow, up arrow, page up
+			<label><input id="bgColorInput" type="color"> Background color</label>
 			<br>
-			Goto page: <input id="gotoPage"> <button id="gotoPageButton" type="button">Go</button>
+			<label><input id="visraamColorInput" type="color"> Visraam color</label>
+			<br>
+			<label><input id="visraamYamkiColorInput" type="color"> Visraam secondary color</label>
+
+			<hr>
+
+			<label><input id="visraamCheckbox" type="checkbox"> Show visraam</label>
+			<br>
+			Go to page: <input id="gotoPage" type="number"> <button id="gotoPageButton" type="button">Go</button>
 		</div>
 
 		<main id="main"></main>

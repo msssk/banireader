@@ -1,6 +1,6 @@
 {
 	"name": "banireader",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"description": "BaniReader simple reader",
 	"main": "src/index.html",
 	"scripts": {
@@ -26,7 +26,7 @@
 	"bugs": {
 		"url": "https://github.com/msssk/banireader/issues"
 	},
-	"homepage": "https://github.com/msssk/banireader",
+	"homepage": "https://msssk.github.io/banireader/",
 	"devDependencies": {
 		"@typescript-eslint/eslint-plugin": "^3.5.0",
 		"@typescript-eslint/parser": "^3.5.0"

@@ -1,6 +1,7 @@
 :root {
 	--primary-font-size: 42px;
 	--primay-line-height: 63px;
+	--table-border-color: hsl(0, 2%, 11%);
 }
 
 @font-face {
@@ -65,13 +66,36 @@ body {
 	color: hsl(217, 33%, 9%);
 	border: 2px solid hsl(197, 40%, 22%);
 	border-radius: 7px;
+	opacity: 0.96;
 	z-index: 1000;
 }
 
-#help input {
+#help input[type='number'] {
 	background-color: hsl(197, 40%, 60%);
 	border: 1px solid hsl(197, 40%, 22%);
 	padding: 0.3em;
+}
+
+#help input[type='checkbox'] {
+	height: 16px;
+	width: 16px;
+}
+
+#help label {
+	display: inline-block;
+	margin-bottom: 4px;
+}
+
+#help hr {
+	border-color: hsl(197, 40%, 22%);
+}
+
+#help input[type='color'] {
+	border: 0;
+	padding: 0 2px;
+	width: 40px;
+	height: 30px;
+	vertical-align: middle;
 }
 
 #help button {
@@ -83,13 +107,16 @@ body {
 }
 
 #main {
-	cursor: none;
 	font-family: 'GurbaniAkharHeavy';
 	font-size: var(--primary-font-size);
 	line-height: var(--primary-line-height);
 	white-space: nowrap;
 	height: 100%;
 	width: 100%;
+}
+
+.nocursor #main {
+	cursor: none;
 }
 
 #main.unsupported {
@@ -108,4 +135,36 @@ body {
 
 .currentPage {
 	z-index: 1;
+}
+
+.visraam .visraam-main {
+	color: hsl(217, 62%, 55%);
+}
+
+.visraam .visraam-yamki {
+	color: hsl(45, 14%, 37%);
+}
+
+.infoTable {
+	border: 1px solid var(--table-border-color);
+	border-collapse: collapse;
+	margin-bottom: 8px;
+}
+
+.infoTable td {
+	border: 1px solid var(--table-border-color);
+	padding: 4px;
+}
+
+kbd {
+	margin: 0px 0.1em;
+	padding: 0.1em 0.6em;
+	border-radius: 3px;
+	border: 1px solid hsl(0, 0%, 76%);
+	color: rgb(51, 51, 51);
+	line-height: 1.4;
+	font-size: 14px;
+	display: inline-block;
+	box-shadow: 0px 1px 0px rgba(0,0,0,0.2), inset 0px 0px 0px 2px hsl(0, 0%, 96%);
+	background-color: hsl(0, 0%, 93%);
 }

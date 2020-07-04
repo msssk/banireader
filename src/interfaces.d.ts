@@ -1,3 +1,22 @@
+export interface ApiPageInfo {
+	page: ApiPageLine[];
+}
+
+export interface VisraamInfo {
+	p: number;
+	t: string;
+}
+
+export interface ApiPageLine {
+	shabadId: number;
+	verse: {
+		gurmukhi: string;
+	};
+	visraam: {
+		sttm: VisraamInfo[]
+	}
+}
+
 export interface BaniSourceData {
 	currentPage?: number;
 	currentShabadId?: number;
@@ -18,4 +37,6 @@ export interface BaniSourceData {
 	 * Inner HTML of currently rendered pages
 	 */
 	renderedPages?: Array<string | null>;
+
+	showVisraam?: boolean;
 }
