@@ -20,13 +20,16 @@ export class Controller {
         this._onClick = (event) => {
             const element = event.target;
             if (element.id === 'source_G' || element.id === 'source_D') {
+                document.getElementById('start').style.display = 'none';
                 const source = element.id.replace('source_', '');
                 this.config = new Config({ source, storageKey: 'banireader' });
                 if (this.config.fontSize) {
                     this.setFontSize(this.config.fontSize);
                 }
+                if (this.config.showVisraam) {
+                    document.getElementById('visraamCheckbox').checked = true;
+                }
                 this.reader = new Reader(document.getElementById('main'), { config: this.config });
-                document.getElementById('start').style.display = 'none';
                 this.reader.render();
             }
             else if (element.id === 'gotoPageButton') {
@@ -35,6 +38,10 @@ export class Controller {
                     this.reader.gotoPage(pageNumber);
                     this.toggleHelp();
                 }
+            }
+            else if (element.id === 'visraamCheckbox') {
+                this.config.showVisraam = element.checked;
+                this.reader.showVisraam(this.config.showVisraam);
             }
         };
         this._onKeyUp = (event) => {
@@ -48,7 +55,9 @@ export class Controller {
                 this.setFontSize(getFontSize() + 2);
             }
             else if (event.key === 'h') {
-                this.toggleHelp();
+                if (this.reader) {
+                    this.toggleHelp();
+                }
             }
             else if (previousKeys.has(event.key)) {
                 this.reader.gotoPreviousPage();
@@ -70,7 +79,11 @@ export class Controller {
     }
     toggleHelp() {
         this.helpNode.hidden = !this.helpNode.hidden;
-        if (!this.helpNode.hidden) {
+        if (this.helpNode.hidden) {
+            document.body.classList.add('nocursor');
+        }
+        else {
+            document.body.classList.remove('nocursor');
             this.gotoPageInput.focus();
         }
     }
