@@ -29,6 +29,8 @@
 	"homepage": "https://msssk.github.io/banireader/",
 	"devDependencies": {
 		"@typescript-eslint/eslint-plugin": "^3.5.0",
-		"@typescript-eslint/parser": "^3.5.0"
+		"@typescript-eslint/parser": "^3.5.0",
+		"eslint": "^7.4.0",
+		"typescript": "^3.9.6"
 	}
 }

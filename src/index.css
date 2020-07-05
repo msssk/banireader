@@ -1,7 +1,11 @@
 :root {
 	--primary-font-size: 42px;
 	--primay-line-height: 63px;
-	--table-border-color: hsl(0, 2%, 11%);
+	--table-border-color: #1d1b1b;
+	--background-color: #0d222b;
+	--text-color: #8fa4c7; /* #7196d0 */
+	--visraam-color-main: #457cd3;
+	--visraam-color-yamki: #6c6551;
 }
 
 @font-face {
@@ -24,9 +28,13 @@ html {
 }
 
 body {
-	background-color: hsl(197, 52%, 11%);
-	color: hsl(217, 33%, 67%); /* hsl(217, 50%, 63%); */
+	background-color: var(--background-color);
+	color: var(--text-color);
 	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+}
+
+[hidden] {
+	display: none !important;
 }
 
 #start {
@@ -58,6 +66,9 @@ body {
 }
 
 #help {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
 	position: absolute;
 	top: 14px;
 	right: 14px;
@@ -127,7 +138,6 @@ body {
 }
 
 .page {
-	background-color: hsl(197, 52%, 11%);
 	padding: 1em 1em 0.5em 1em;
 	position: absolute;
 	z-index: 0;
@@ -138,11 +148,11 @@ body {
 }
 
 .visraam .visraam-main {
-	color: hsl(217, 62%, 55%);
+	color: var(--visraam-color-main);
 }
 
 .visraam .visraam-yamki {
-	color: hsl(45, 14%, 37%);
+	color: var(--visraam-color-yamki);
 }
 
 .infoTable {

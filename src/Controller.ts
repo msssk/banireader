@@ -1,8 +1,14 @@
 import { BaniSourceData } from './interfaces.d';
 import { Config } from './Config.js';
+import Help, { HelpController } from './Help.js';
 import { Reader } from './Reader.js';
+import { createComponentRef } from './tizi.js';
 
 const enum CssCustomProps {
+	BackgroundColor = '--background-color',
+	TextColor = '--text-color',
+	VisraamColorMain = '--visraam-color-main',
+	VisraamColorYamki = '--visraam-color-yamki',
 	PrimaryFontSize = '--primary-font-size',
 	PrimaryLineHeight = '--primary-line-height'
 }
@@ -18,7 +24,7 @@ const nextKeys = new Set([
 const previousKeys = new Set([
 	'ArrowLeft',
 	'ArrowUp',
-	'PageUp'
+	'PageUp',
 ]);
 
 function getFontSize () {
@@ -32,11 +38,29 @@ export class Controller {
 	config: BaniSourceData;
 	gotoPageButton: HTMLButtonElement;
 	gotoPageInput: HTMLInputElement;
-	helpNode: HTMLElement;
+	help: any;
 	reader: Reader;
 
-	start () {
-		this.helpNode = document.getElementById('help');
+	start (): void {
+		// @ts-ignore: TODO: fix typing
+		this.help = createComponentRef<HelpController, typeof Help>();
+		document.getElementById('help').replaceWith(Help({
+			id: 'help',
+			hidden: true,
+			onChangeTextColor (value) {
+				document.documentElement.style.setProperty(CssCustomProps.TextColor, value);
+			},
+			onChangeBackgroundColor (value) {
+				document.documentElement.style.setProperty(CssCustomProps.BackgroundColor, value);
+			},
+			onChangeVisraamColor (value) {
+				document.documentElement.style.setProperty(CssCustomProps.VisraamColorMain, value);
+			},
+			onChangeVisraamColorYamki (value) {
+				document.documentElement.style.setProperty(CssCustomProps.VisraamColorYamki, value);
+			},
+			ref: this.help,
+		}));
 		this.gotoPageInput = document.getElementById('gotoPage') as HTMLInputElement;
 		this.gotoPageButton = document.getElementById('gotoPageButton') as HTMLButtonElement;
 
@@ -51,15 +75,35 @@ export class Controller {
 		this.config.fontSize = size;
 	}
 
-	toggleHelp () {
-		this.helpNode.hidden = !this.helpNode.hidden;
+	/**
+	 * Toggle mouse cursor visibility.
+	 * @param force - if true cursor will be visible, if false cursor will be hidden
+	 */
+	toggleCursor (force?: boolean) {
+		document.body.classList.toggle('nocursor', !force);
+	}
 
-		if (this.helpNode.hidden) {
-			document.body.classList.add('nocursor');
+	toggleHelp () {
+		this.toggleCursor(this.help.hidden);
+		if (this.help.hidden) {
+			this.help.show();
 		}
 		else {
-			document.body.classList.remove('nocursor');
+			this.help.hide();
+		}
+
+		if (!this.help.hidden) {
 			this.gotoPageInput.focus();
+
+			const style = getComputedStyle(document.documentElement);
+			const textColor = style.getPropertyValue(CssCustomProps.TextColor);
+			const backgroundColor = style.getPropertyValue(CssCustomProps.BackgroundColor);
+			const visraamColor = style.getPropertyValue(CssCustomProps.VisraamColorMain);
+			const visraamColorYamki = style.getPropertyValue(CssCustomProps.VisraamColorYamki);
+			this.help.textColor = textColor.trim();
+			this.help.backgroundColor = backgroundColor.trim();
+			this.help.visraamColor = visraamColor.trim();
+			this.help.visraamColorYamki = visraamColorYamki.trim();
 		}
 	}
 
@@ -80,6 +124,7 @@ export class Controller {
 				(document.getElementById('visraamCheckbox') as HTMLInputElement).checked = true;
 			}
 
+			this.toggleCursor(false);
 			this.reader = new Reader(document.getElementById('main'), { config: this.config });
 			this.reader.render();
 		}

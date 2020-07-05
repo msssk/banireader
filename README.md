@@ -1,5 +1,6 @@
-Bani Reader provides a clean view of bani intended for reading on a computer screen. Currently only Google Chromium
-based browsers are known to have a text layout engine that works well.
+Bani Reader provides a clean view of bani intended for reading on a computer screen. Bani is loaded from the
+[SikhiToTheMax](https://www.sikhitothemax.org/) API. Currently only Google Chromium based browsers are known to have a
+text layout engine that works well.
 
 <details>
 	<summary>Why only Chrome?</summary>
@@ -16,8 +17,8 @@ The initial screen allows you to select which source you would like to read from
 either enable fullscreen or at least size and position your browser the way you want to keep it while reading. The
 text layout is only somewhat responsive to changes in window or font size, so it may take a few pages of navigating to
 catch up to any changes.
-After selecting a source you will see the first page of bani displayed. While reading bani you can press "H" at any
-time to bring up help and options.
+After selecting a source you will see the first page of bani displayed. While reading bani you can press <kbd>h</kbd>
+at any time to bring up help and options.
 
 * Display of visraam (pauses) can be enabled or disabled
 * Colors can be customized

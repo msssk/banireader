@@ -21,6 +21,9 @@ module.exports = {
 		'no-compare-neg-zero': 'error',
 		'no-unsafe-negation': 'error',
 
+		// TypeScript
+		'@typescript-eslint/explicit-module-boundary-types': 'off',
+
 		// Best Practices
 		'accessor-pairs': 'warn',
 		'array-callback-return': 'warn',
@@ -79,7 +82,7 @@ module.exports = {
 		'comma-dangle': [ 'error', {
 			arrays: 'always-multiline',
 			objects: 'always-multiline',
-			imports: 'never',
+			imports: 'always-multiline',
 			exports: 'never',
 		} ],
 		'comma-spacing': [ 'error', { before: false, after: true } ],
@@ -88,7 +91,7 @@ module.exports = {
 		'consistent-this': [ 'warn', 'self' ],
 		'eol-last': [ 'error', 'always' ],
 		'func-call-spacing': [ 'error', 'never' ],
-		'id-blacklist': [ 'error', 'e', 'err', 'evt' ],
+		'id-blacklist': [ 'error', 'err', 'evt' ],
 		indent: [ 'error', 'tab', {
 			ArrayExpression: 1,
 			CallExpression: { arguments: 1 },
@@ -127,7 +130,7 @@ module.exports = {
 		'max-nested-callbacks': [ 'error', 6 ],
 		'max-params': [ 'warn', 5 ],
 		'max-statements-per-line': [ 'error', { max: 1 } ],
-		'new-cap': [ 'warn', {
+		'new-cap': [ 'off', {
 			capIsNew: true,
 			newIsCap: false,
 			properties: true
