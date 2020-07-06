@@ -1,5 +1,5 @@
-import { Config } from './Config.js';
 import { ApiPageInfo, ApiPageLine, BaniSourceData } from './interfaces.d';
+import { Config } from './Config.js';
 
 const MAX_RENDERED_PAGES = 3;
 
@@ -8,6 +8,7 @@ function parseApiLine (this: Reader, apiLine: ApiPageLine) {
 
 	const visraamMap = apiLine.visraam.sttm.reduce((sum: any, { p, t }) => {
 		sum[p] = t;
+
 		return sum;
 	}, {});
 
@@ -30,7 +31,6 @@ function parseApiLine (this: Reader, apiLine: ApiPageLine) {
 
 	return line;
 }
-
 
 export interface ReaderOptions {
 	config: Config

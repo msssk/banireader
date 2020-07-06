@@ -137,7 +137,7 @@ module.exports = {
 		} ],
 		'new-parens': 'error',
 		'newline-before-return': 'error',
-		'newline-per-chained-call': [ 'error', { ignoreChainWithDepth: 2 } ],
+		'newline-per-chained-call': [ 'error', { ignoreChainWithDepth: 3 } ],
 		'no-array-constructor': 'error',
 		'no-bitwise': 'warn',
 		'no-lonely-if': 'warn',

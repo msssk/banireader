@@ -1,10 +1,11 @@
 import { BaniSourceData } from './interfaces.d';
-import { Config } from './Config.js';
+import createConfig from './Config.js';
 import Help, { HelpController } from './Help.js';
 import { Reader } from './Reader.js';
 import { createComponentRef } from './tizi.js';
+import SourceSelection, { SourceSelectionController } from './SourceSelection.js';
 
-const enum CssCustomProps {
+export const enum CssCustomProps {
 	BackgroundColor = '--background-color',
 	TextColor = '--text-color',
 	VisraamColorMain = '--visraam-color-main',
@@ -34,19 +35,22 @@ function getFontSize () {
 	);
 }
 
-export class Controller {
-	config: BaniSourceData;
-	gotoPageButton: HTMLButtonElement;
-	gotoPageInput: HTMLInputElement;
-	help: any;
-	reader: Reader;
+export default function App () {
+	const config = createConfig({ storageKey: 'banireader' });
+	const sourceSelection = createComponentRef<typeof SourceSelection, SourceSelectionController>();
+	const help = createComponentRef<typeof Help, HelpController>();
 
-	start (): void {
-		// @ts-ignore: TODO: fix typing
-		this.help = createComponentRef<HelpController, typeof Help>();
-		document.getElementById('help').replaceWith(Help({
-			id: 'help',
+	function onSelectSource (source: string) {
+		config.source = source;
+	}
+
+	document.body.appendChild(SourceSelection({ ref: sourceSelection, onSelectSource }));
+
+	requestAnimationFrame(function () {
+		document.body.appendChild(Help({
+			config,
 			hidden: true,
+			ref: help,
 			onChangeTextColor (value) {
 				document.documentElement.style.setProperty(CssCustomProps.TextColor, value);
 			},
@@ -59,20 +63,43 @@ export class Controller {
 			onChangeVisraamColorYamki (value) {
 				document.documentElement.style.setProperty(CssCustomProps.VisraamColorYamki, value);
 			},
-			ref: this.help,
 		}));
+
+		document.body.addEventListener('keyup', onKeyUp);
+	});
+
+	function onKeyUp (event: KeyboardEvent) {
+		if (event.key === 'h') {
+			if (help.hidden) {
+				help.show();
+			}
+			else {
+				help.hide();
+			}
+		}
+	}
+
+	function setFontSize (size: number) {
+		const { style } = document.documentElement;
+		style.setProperty(CssCustomProps.PrimaryFontSize, `${size}px`);
+		style.setProperty(CssCustomProps.PrimaryLineHeight, `${Math.floor(size * CSS_LINE_HEIGHT)}px`)
+		config.fontSize = size;
+	}
+}
+
+export class Controller {
+	config: BaniSourceData;
+	gotoPageButton: HTMLButtonElement;
+	gotoPageInput: HTMLInputElement;
+	help: any;
+	reader: Reader;
+
+	start (): void {
 		this.gotoPageInput = document.getElementById('gotoPage') as HTMLInputElement;
 		this.gotoPageButton = document.getElementById('gotoPageButton') as HTMLButtonElement;
 
 		document.addEventListener('keyup', this._onKeyUp);
 		document.addEventListener('click', this._onClick);
-	}
-
-	setFontSize (size: number) {
-		const { style } = document.documentElement;
-		style.setProperty(CssCustomProps.PrimaryFontSize, `${size}px`);
-		style.setProperty(CssCustomProps.PrimaryLineHeight, `${Math.floor(size * CSS_LINE_HEIGHT)}px`)
-		this.config.fontSize = size;
 	}
 
 	/**

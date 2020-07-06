@@ -17,6 +17,15 @@ export interface ApiPageLine {
 	}
 }
 
+export interface AppConfig {
+	backgroundColor?: string;
+	fontSize?: number;
+	source?: string;
+	textColor?: string;
+	visraamColor?: string;
+	visraamColorYamki?: string;
+}
+
 export interface BaniSourceData {
 	currentPage?: number;
 	currentShabadId?: number;
@@ -25,8 +34,6 @@ export interface BaniSourceData {
 	 * Index of the currently displayed page within the pageNodes array
 	 */
 	displayedPage?: 0 | 1;
-
-	fontSize?: number;
 
 	/**
 	 * Cache of fetched but not yet rendered lines

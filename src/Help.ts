@@ -1,5 +1,6 @@
+import { Config } from './Config.js';
 import {
-	ComponentCreateOptions,
+	ComponentOptions,
 	Controller,
 	createRef,
 	br,
@@ -24,7 +25,8 @@ export interface HelpController extends Controller {
 	visraamColorYamki: string;
 }
 
-export interface HelpOptions extends ComponentCreateOptions<HelpController, HTMLDivElement> {
+export interface HelpOptions extends ComponentOptions<HTMLDivElement, HelpController> {
+	config: Config;
 	onChangeBackgroundColor?(value: string): void;
 	onChangeTextColor?(value: string): void;
 	onChangeVisraamColor?(value: string): void;
@@ -33,6 +35,7 @@ export interface HelpOptions extends ComponentCreateOptions<HelpController, HTML
 
 export default function Help (options?: HelpOptions) {
 	const {
+		config,
 		onChangeBackgroundColor,
 		onChangeTextColor,
 		onChangeVisraamColor,
@@ -47,6 +50,8 @@ export default function Help (options?: HelpOptions) {
 		visraamColorInput: createRef<HTMLInputElement>(),
 		visraamColorYamkiInput: createRef<HTMLInputElement>(),
 		visraamCheckbox: createRef<HTMLInputElement>(),
+		resetButton: createRef<HTMLInputElement>(),
+		saveColorsButton: createRef<HTMLInputElement>(),
 	};
 
 	function onInput (event: InputEvent) {
@@ -64,59 +69,53 @@ export default function Help (options?: HelpOptions) {
 		}
 	}
 
-	const element = div(elementOptions, [
+	function resetColors () {}
+	function saveColors () {}
+
+	const element = div({ ...elementOptions, className: 'help' }, [
 		table({ className: 'infoTable' }, [
 			tr([
 				td('Next page'),
-				td([
-					kbd('Space'),
-					' ',
-					kbd('►'),
-					' ',
-					kbd('▼'),
-					' ',
-					kbd('Page Down'),
-				]),
+				td([ kbd('Space'), ' ', kbd('►'), ' ', kbd('▼'), ' ', kbd('Page Down') ]),
 			]),
 			tr([
 				td('Previous page'),
-				td([
-					kbd('◄'),
-					' ',
-					kbd('▲'),
-					' ',
-					kbd('Page Up'),
-				]),
+				td([ kbd('◄'), ' ', kbd('▲'), ' ', kbd('Page Up') ]),
 			]),
 			tr([
-				td([
-					'Increase/decrease',
-					br(),
-					'font size',
-				]),
-				td([
-					kbd('+'),
-					' / ',
-					kbd('-'),
-				]),
+				td([ 'Increase/decrease', br(), 'font size' ]),
+				td([ kbd('+'), ' / ', kbd('-') ]),
 			]),
 		]),
 
-		label([
-			input({ ref: refs.textColorInput, id: 'textColorInput', type: 'color' }),
-			' Text color',
-		]),
-		label([
-			input({ ref: refs.backgroundColorInput, id: 'backgroundColorInput', type: 'color' }),
-			' Background color',
-		]),
-		label([
-			input({ ref: refs.visraamColorInput, id: 'visraamColorInput', type: 'color' }),
-			' Visraam color',
-		]),
-		label([
-			input({ ref: refs.visraamColorYamkiInput, id: 'textColorInput', type: 'color' }),
-			' Visraam secondary color',
+		div({ className: 'row' }, [
+			div({ className: 'column colorControls' }, [
+				label([
+					input({ ref: refs.textColorInput, id: 'textColorInput', type: 'color', value: config.textColor }),
+					' Text color',
+				]),
+				label([
+					input({ ref: refs.backgroundColorInput, id: 'backgroundColorInput', type: 'color' }),
+					' Background color',
+				]),
+				label([
+					input({ ref: refs.visraamColorInput, id: 'visraamColorInput', type: 'color' }),
+					' Visraam color',
+				]),
+				label([
+					input({ ref: refs.visraamColorYamkiInput, id: 'textColorInput', type: 'color' }),
+					' Visraam secondary color',
+				]),
+			]),
+
+			div({ className: 'column colorButtons' }, [
+				button({ ref: refs.resetButton, className: 'buttonSecondary', onClick: resetColors },
+					'Reset'
+				),
+				button({ ref: refs.saveColorsButton, onClick: saveColors },
+					'Save'
+				),
+			]),
 		]),
 
 		hr(),
@@ -141,6 +140,7 @@ export default function Help (options?: HelpOptions) {
 		ref.control(element, {
 			destroy () {
 				element.removeEventListener('input', onInput);
+				element.remove();
 			},
 
 			get hidden () {

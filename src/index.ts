@@ -1,4 +1,3 @@
-import { Controller } from './Controller.js';
+import App from './App.js';
 
-const controller = new Controller();
-controller.start();
+App();
