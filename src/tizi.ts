@@ -139,15 +139,23 @@ const eventHandlerRegex = /^on[A-Z][a-zA-Z]+$/;
 
 function applyOptions (node: Node, options: ElementOptions) {
 	Object.keys(options).forEach(function (key) {
+		const value = options[key];
+		if (key === 'className') {
+			key = 'class';
+		}
+
 		if (eventHandlerRegex.test(key)) {
-			const [ eventListener, eventListenerOptions ] = (Array.isArray(options[key]) ?
-				options[key] :
-				[ options[key] ]) as [EventListener, EventListenerOptions?];
+			const [ eventListener, eventListenerOptions ] = (Array.isArray(value) ?
+				value :
+				[ value ]) as [EventListener, EventListenerOptions?];
 			const eventName = key.slice(2).toLowerCase();
 			node.addEventListener(eventName, eventListener, eventListenerOptions);
 		}
+		else if ((node as HTMLElement).setAttribute && typeof value === 'string') {
+			(node as HTMLElement).setAttribute(key, value as string);
+		}
 		else {
-			(node as any)[key] = options[key];
+			(node as any)[key] = value;
 		}
 	});
 }
@@ -207,8 +215,9 @@ export function render<C extends Controller = Controller> (
 		children.forEach(function (child) {
 			if (typeof child === 'string') {
 				child = document.createTextNode(child);
-				element.appendChild(child);
 			}
+
+			element.appendChild(child);
 		});
 	}
 

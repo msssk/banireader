@@ -2,9 +2,11 @@ import { ApiPageInfo, ApiPageLine, BaniSourceData } from './interfaces.d';
 import { Config } from './Config.js';
 import {
 	ComponentOptions,
+	RenderChildren,
 	createRef,
 	main,
 	section,
+	render,
 } from './tizi.js';
 
 const MAX_RENDERED_PAGES = 3;
@@ -49,7 +51,7 @@ export interface ReaderState {
 	isNavigating: boolean;
 }
 
-export default function Reader (options: ReaderOptions) {
+export default function Reader (options: ReaderOptions, children?: RenderChildren) {
 	const {
 		config,
 		ref,
@@ -67,11 +69,7 @@ export default function Reader (options: ReaderOptions) {
 		section({ ref: refs.pages[2], className: 'page' }),
 	]);
 
-	if (ref) {
-		if (ref.control) {
-			ref.control(element);
-		}
-	}
+	render(element, options, children);
 
 	return element;
 }

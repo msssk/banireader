@@ -1,10 +1,12 @@
 import {
 	ComponentOptions,
 	Controller,
+	RenderChildren,
 	button,
 	div,
 	kbd,
 	p,
+	render,
 } from './tizi.js';
 
 export interface SourceSelectionController extends Controller {
@@ -16,7 +18,7 @@ export interface SourceSelectionOptions extends ComponentOptions<HTMLDivElement,
 	onSelectSource(source: string): void;
 }
 
-export default function SourceSelection (options: SourceSelectionOptions) {
+export default function SourceSelection (options: SourceSelectionOptions, children?: RenderChildren) {
 	const {
 		onSelectSource,
 		ref,
@@ -39,22 +41,20 @@ export default function SourceSelection (options: SourceSelectionOptions) {
 
 	element.addEventListener('click', onClick);
 
-	if (ref) {
-		ref.control(element, {
-			destroy () {
-				element.removeEventListener('click', onClick);
-				element.remove();
-			},
+	render(element, options, children, {
+		destroy () {
+			element.removeEventListener('click', onClick);
+			element.remove();
+		},
 
-			hide () {
-				element.hidden = true;
-			},
+		hide () {
+			element.hidden = true;
+		},
 
-			show () {
-				element.hidden = false;
-			},
-		});
-	}
+		show () {
+			element.hidden = false;
+		},
+	});
 
 	return element;
 }
