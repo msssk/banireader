@@ -1,5 +1,11 @@
 import { ApiPageInfo, ApiPageLine, BaniSourceData } from './interfaces.d';
 import { Config } from './Config.js';
+import {
+	ComponentOptions,
+	createRef,
+	main,
+	section,
+} from './tizi.js';
 
 const MAX_RENDERED_PAGES = 3;
 
@@ -32,7 +38,7 @@ function parseApiLine (this: Reader, apiLine: ApiPageLine) {
 	return line;
 }
 
-export interface ReaderOptions {
+export interface ReaderOptions extends ComponentOptions<HTMLElement> {
 	config: Config
 }
 
@@ -43,7 +49,34 @@ export interface ReaderState {
 	isNavigating: boolean;
 }
 
-export class Reader {
+export default function Reader (options: ReaderOptions) {
+	const {
+		config,
+		ref,
+		...elementOptions
+	} = options;
+
+	const refs = {
+		main: createRef<HTMLElement>(),
+		pages: [ createRef<HTMLElement>(), createRef<HTMLElement>(), createRef<HTMLElement>() ],
+	};
+
+	const element = main({ ref: refs.main, className: 'reader', ...elementOptions }, [
+		section({ ref: refs.pages[0], className: 'page' }),
+		section({ ref: refs.pages[1], className: 'page' }),
+		section({ ref: refs.pages[2], className: 'page' }),
+	]);
+
+	if (ref) {
+		if (ref.control) {
+			ref.control(element);
+		}
+	}
+
+	return element;
+}
+
+export class ReaderC {
 	protected _pageNodes: HTMLElement[];
 	protected _rootNode: HTMLElement;
 	protected _sizingNode: HTMLElement;

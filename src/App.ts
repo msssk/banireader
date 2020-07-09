@@ -1,7 +1,7 @@
 import { BaniSourceData } from './interfaces.d';
 import createConfig from './Config.js';
 import Help, { HelpController } from './Help.js';
-import { Reader } from './Reader.js';
+import Reader from './Reader.js';
 import { createComponentRef } from './tizi.js';
 import SourceSelection, { SourceSelectionController } from './SourceSelection.js';
 
@@ -37,8 +37,9 @@ function getFontSize () {
 
 export default function App () {
 	const config = createConfig({ storageKey: 'banireader' });
-	const sourceSelection = createComponentRef<typeof SourceSelection, SourceSelectionController>();
-	const help = createComponentRef<typeof Help, HelpController>();
+	const sourceSelection = createComponentRef<ReturnType<typeof SourceSelection>, SourceSelectionController>();
+	const help = createComponentRef<ReturnType<typeof Help>, HelpController>();
+	// const reader = createComponentRef<typeof Reader, ReaderController>();
 
 	function onSelectSource (source: string) {
 		config.source = source;
@@ -47,6 +48,11 @@ export default function App () {
 	document.body.appendChild(SourceSelection({ ref: sourceSelection, onSelectSource }));
 
 	requestAnimationFrame(function () {
+		document.body.appendChild(Reader({
+			config,
+			hidden: true,
+		}));
+
 		document.body.appendChild(Help({
 			config,
 			hidden: true,
@@ -63,6 +69,10 @@ export default function App () {
 			onChangeVisraamColorYamki (value) {
 				document.documentElement.style.setProperty(CssCustomProps.VisraamColorYamki, value);
 			},
+			onToggleVisraam (value) {
+				config.showVisraam = value;
+				// reader.showVisraam(value);
+			},
 		}));
 
 		document.body.addEventListener('keyup', onKeyUp);
@@ -70,12 +80,26 @@ export default function App () {
 
 	function onKeyUp (event: KeyboardEvent) {
 		if (event.key === 'h') {
-			if (help.hidden) {
-				help.show();
-			}
-			else {
-				help.hide();
-			}
+			toggleHelp();
+		}
+	}
+
+	/**
+	 * Toggle mouse cursor visibility.
+	 * @param force - if true cursor will be visible, if false cursor will be hidden
+	 */
+	function toggleCursor (force?: boolean) {
+		document.body.classList.toggle('nocursor', !force);
+	}
+
+	function toggleHelp () {
+		toggleCursor(help.hidden);
+
+		if (help.hidden) {
+			help.show();
+		}
+		else {
+			help.hide();
 		}
 	}
 

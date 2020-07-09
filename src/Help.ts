@@ -1,8 +1,10 @@
-import { Config } from './Config.js';
+import { Config, defaultColors } from './Config.js';
 import {
 	ComponentOptions,
 	Controller,
+	RenderChildren,
 	createRef,
+	render,
 	br,
 	button,
 	div,
@@ -31,15 +33,17 @@ export interface HelpOptions extends ComponentOptions<HTMLDivElement, HelpContro
 	onChangeTextColor?(value: string): void;
 	onChangeVisraamColor?(value: string): void;
 	onChangeVisraamColorYamki?(value: string): void;
+	onToggleVisraam?(value: boolean): void;
 }
 
-export default function Help (options?: HelpOptions) {
+export default function Help (options?: HelpOptions, children?: RenderChildren) {
 	const {
 		config,
 		onChangeBackgroundColor,
 		onChangeTextColor,
 		onChangeVisraamColor,
 		onChangeVisraamColorYamki,
+		onToggleVisraam,
 		ref,
 		...elementOptions
 	} = options;
@@ -55,24 +59,46 @@ export default function Help (options?: HelpOptions) {
 	};
 
 	function onInput (event: InputEvent) {
-		if (event.target === refs.textColorInput.e) {
-			onChangeTextColor && onChangeTextColor(refs.textColorInput.e.value);
+		const target = event.target as HTMLInputElement;
+
+		if (target.id === refs.textColorInput.id) {
+			onChangeTextColor && onChangeTextColor(refs.textColorInput.value);
 		}
-		else if (event.target === refs.backgroundColorInput.e) {
-			onChangeBackgroundColor && onChangeBackgroundColor(refs.backgroundColorInput.e.value);
+		else if (target.id === refs.backgroundColorInput.id) {
+			onChangeBackgroundColor && onChangeBackgroundColor(refs.backgroundColorInput.value);
 		}
-		else if (event.target === refs.visraamColorInput.e) {
-			onChangeVisraamColor && onChangeVisraamColor(refs.visraamColorInput.e.value);
+		else if (target.id === refs.visraamColorInput.id) {
+			onChangeVisraamColor && onChangeVisraamColor(refs.visraamColorInput.value);
 		}
-		else if (event.target === refs.visraamColorYamkiInput.e) {
-			onChangeVisraamColorYamki && onChangeVisraamColorYamki(refs.visraamColorYamkiInput.e.value);
+		else if (target.id === refs.visraamColorYamkiInput.id) {
+			onChangeVisraamColorYamki && onChangeVisraamColorYamki(refs.visraamColorYamkiInput.value);
 		}
 	}
 
-	function resetColors () {}
-	function saveColors () {}
+	function resetColors () {
+		refs.backgroundColorInput.value = defaultColors.backgroundColor;
+		refs.textColorInput.value = defaultColors.textColor;
+		refs.visraamColorInput.value = defaultColors.visraamColor;
+		refs.visraamColorYamkiInput.value = defaultColors.visraamColor;
 
-	const element = div({ ...elementOptions, className: 'help' }, [
+		onChangeBackgroundColor && onChangeBackgroundColor(defaultColors.backgroundColor);
+		onChangeTextColor && onChangeTextColor(defaultColors.textColor);
+		onChangeVisraamColor && onChangeVisraamColor(defaultColors.visraamColor);
+		onChangeVisraamColorYamki && onChangeVisraamColorYamki(defaultColors.visraamColorYamki);
+	}
+
+	function saveColors () {
+		config.backgroundColor = refs.backgroundColorInput.value;
+		config.textColor = refs.textColorInput.value;
+		config.visraamColor = refs.visraamColorInput.value;
+		config.visraamColorYamki = refs.visraamColorYamkiInput.value;
+	}
+
+	function toggleVisraam () {
+		onToggleVisraam && onToggleVisraam(refs.visraamCheckbox.checked);
+	}
+
+	const element = div({ ...elementOptions, className: 'help', onInput }, [
 		table({ className: 'infoTable' }, [
 			tr([
 				td('Next page'),
@@ -91,19 +117,39 @@ export default function Help (options?: HelpOptions) {
 		div({ className: 'row' }, [
 			div({ className: 'column colorControls' }, [
 				label([
-					input({ ref: refs.textColorInput, id: 'textColorInput', type: 'color', value: config.textColor }),
+					input({
+						ref: refs.textColorInput,
+						id: 'textColorInput',
+						type: 'color',
+						value: config.textColor,
+					}),
 					' Text color',
 				]),
 				label([
-					input({ ref: refs.backgroundColorInput, id: 'backgroundColorInput', type: 'color' }),
+					input({
+						ref: refs.backgroundColorInput,
+						id: 'backgroundColorInput',
+						type: 'color',
+						value: config.backgroundColor,
+					}),
 					' Background color',
 				]),
 				label([
-					input({ ref: refs.visraamColorInput, id: 'visraamColorInput', type: 'color' }),
+					input({
+						ref: refs.visraamColorInput,
+						id: 'visraamColorInput',
+						type: 'color',
+						value: config.visraamColor,
+					}),
 					' Visraam color',
 				]),
 				label([
-					input({ ref: refs.visraamColorYamkiInput, id: 'textColorInput', type: 'color' }),
+					input({
+						ref: refs.visraamColorYamkiInput,
+						id: 'textColorInput',
+						type: 'color',
+						value: config.visraamColorYamki,
+					}),
 					' Visraam secondary color',
 				]),
 			]),
@@ -121,7 +167,7 @@ export default function Help (options?: HelpOptions) {
 		hr(),
 
 		label([
-			input({ ref: refs.visraamCheckbox, id: 'visraamCheckbox', type: 'checkbox' }),
+			input({ ref: refs.visraamCheckbox, id: 'visraamCheckbox', type: 'checkbox', onClick: toggleVisraam }),
 			'Show visraam',
 		]),
 		div([
@@ -134,60 +180,56 @@ export default function Help (options?: HelpOptions) {
 		]),
 	]);
 
-	element.addEventListener('input', onInput);
+	render(element, options, children, {
+		destroy () {
+			element.removeEventListener('input', onInput);
+			element.remove();
+		},
 
-	if (ref) {
-		ref.control(element, {
-			destroy () {
-				element.removeEventListener('input', onInput);
-				element.remove();
-			},
+		get hidden () {
+			return element.hidden;
+		},
 
-			get hidden () {
-				return element.hidden;
-			},
+		hide () {
+			element.hidden = true;
+		},
 
-			hide () {
-				element.hidden = true;
-			},
+		show () {
+			element.hidden = false;
+		},
 
-			show () {
-				element.hidden = false;
-			},
+		get textColor () {
+			return refs.textColorInput.value;
+		},
 
-			get textColor () {
-				return refs.textColorInput.e.value;
-			},
+		set textColor (value: string) {
+			refs.textColorInput.value = value;
+		},
 
-			set textColor (value: string) {
-				refs.textColorInput.e.value = value;
-			},
+		get backgroundColor () {
+			return refs.backgroundColorInput.value;
+		},
 
-			get backgroundColor () {
-				return refs.backgroundColorInput.e.value;
-			},
+		set backgroundColor (value: string) {
+			refs.backgroundColorInput.value = value;
+		},
 
-			set backgroundColor (value: string) {
-				refs.backgroundColorInput.e.value = value;
-			},
+		get visraamColor () {
+			return refs.visraamColorInput.value;
+		},
 
-			get visraamColor () {
-				return refs.visraamColorInput.e.value;
-			},
+		set visraamColor (value: string) {
+			refs.visraamColorInput.value = value;
+		},
 
-			set visraamColor (value: string) {
-				refs.visraamColorInput.e.value = value;
-			},
+		get visraamColorYamki () {
+			return refs.visraamColorYamkiInput.value;
+		},
 
-			get visraamColorYamki () {
-				return refs.visraamColorYamkiInput.e.value;
-			},
-
-			set visraamColorYamki (value: string) {
-				refs.visraamColorYamkiInput.e.value = value;
-			},
-		});
-	}
+		set visraamColorYamki (value: string) {
+			refs.visraamColorYamkiInput.value = value;
+		},
+	});
 
 	return element;
 }

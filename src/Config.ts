@@ -37,6 +37,7 @@ export default function createConfig (options: ConfigOptions): Config {
 
 	const dataJson = localStorage.getItem(options.storageKey);
 	Object.assign(config, JSON.parse(dataJson || '{}'));
+	let storagePending = false;
 
 	return new Proxy<Config>(config, {
 		get (target, property: (keyof AppConfig) | (keyof BaniSourceData)) {
@@ -56,14 +57,19 @@ export default function createConfig (options: ConfigOptions): Config {
 				config[target.source][property] = value;
 			}
 
-			requestAnimationFrame(function () {
-				const storageData = JSON.parse(localStorage.getItem(options.storageKey) || '{}');
-				if (!storageData[config.source]) {
-					storageData[config.source] = Object.create(null);
-				}
-				Object.assign(storageData[config.source], config[config.source]);
-				localStorage.setItem(options.storageKey, JSON.stringify(storageData));
-			});
+			if (!storagePending) {
+				storagePending = true;
+
+				requestAnimationFrame(function () {
+					const storageData = JSON.parse(localStorage.getItem(options.storageKey) || '{}');
+					if (!storageData[config.source]) {
+						storageData[config.source] = Object.create(null);
+					}
+					Object.assign(storageData[config.source], config[config.source]);
+					localStorage.setItem(options.storageKey, JSON.stringify(storageData));
+					storagePending = false;
+				});
+			}
 
 			return true;
 		},

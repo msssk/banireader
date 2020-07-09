@@ -152,7 +152,7 @@ body {
 	margin-top: var(--element-margin);
 }
 
-#main {
+.reader {
 	font-family: 'GurbaniAkharHeavy';
 	font-size: var(--primary-font-size);
 	line-height: var(--primary-line-height);
@@ -161,11 +161,11 @@ body {
 	width: 100%;
 }
 
-.nocursor #main {
+.nocursor .reader {
 	cursor: none;
 }
 
-#main.unsupported {
+.reader.unsupported {
 	cursor: auto;
 	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 	padding-top: 4em;

@@ -46,8 +46,8 @@ module.exports = {
 		'no-invalid-this': 'error',
 		'no-lone-blocks': 'error',
 		'no-magic-numbers': [ 'warn', {
-			ignore: [ -1, 0, 1 ],
-			ignoreArrayIndexes: true
+			ignore: [ -1, 0, 1, 2 ],
+			ignoreArrayIndexes: true,
 		} ],
 		'no-multi-spaces': 'error',
 		'no-multi-str': 'error',
