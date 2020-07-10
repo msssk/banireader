@@ -33,18 +33,20 @@ export interface HelpOptions extends ComponentOptions<HTMLDivElement, HelpContro
 	onChangeTextColor?(value: string): void;
 	onChangeVisraamColor?(value: string): void;
 	onChangeVisraamColorYamki?(value: string): void;
+	onGotoPage?(page: number): void;
 	onToggleVisraam?(value: boolean): void;
 }
 
-export default function Help (options?: HelpOptions, children?: RenderChildren) {
+export default function Help (options: HelpOptions, children?: RenderChildren) {
 	const {
 		config,
 		onChangeBackgroundColor,
 		onChangeTextColor,
 		onChangeVisraamColor,
 		onChangeVisraamColorYamki,
+		onGotoPage,
 		onToggleVisraam,
-		ref,
+		ref, // TODOC: must always extract all component options from elementOptions
 		...elementOptions
 	} = options;
 
@@ -56,21 +58,22 @@ export default function Help (options?: HelpOptions, children?: RenderChildren) 
 		visraamCheckbox: createRef<HTMLInputElement>(),
 		resetButton: createRef<HTMLInputElement>(),
 		saveColorsButton: createRef<HTMLInputElement>(),
+		gotoPageInput: createRef<HTMLInputElement>(),
 	};
 
 	function onInput (event: InputEvent) {
 		const target = event.target as HTMLInputElement;
 
-		if (target.id === refs.textColorInput.id) {
+		if (target === refs.textColorInput.node) {
 			onChangeTextColor && onChangeTextColor(refs.textColorInput.value);
 		}
-		else if (target.id === refs.backgroundColorInput.id) {
+		else if (target === refs.backgroundColorInput.node) {
 			onChangeBackgroundColor && onChangeBackgroundColor(refs.backgroundColorInput.value);
 		}
-		else if (target.id === refs.visraamColorInput.id) {
+		else if (target === refs.visraamColorInput.node) {
 			onChangeVisraamColor && onChangeVisraamColor(refs.visraamColorInput.value);
 		}
-		else if (target.id === refs.visraamColorYamkiInput.id) {
+		else if (target === refs.visraamColorYamkiInput.node) {
 			onChangeVisraamColorYamki && onChangeVisraamColorYamki(refs.visraamColorYamkiInput.value);
 		}
 	}
@@ -98,8 +101,14 @@ export default function Help (options?: HelpOptions, children?: RenderChildren) 
 		onToggleVisraam && onToggleVisraam(refs.visraamCheckbox.checked);
 	}
 
-	const element = div({ ...elementOptions, className: 'help', onInput }, [
-		table({ className: 'infoTable' }, [
+	function onClickGotoPage () {
+		const page = parseInt(refs.gotoPageInput.value, 10);
+		onGotoPage && onGotoPage(page);
+		refs.gotoPageInput.value = '';
+	}
+
+	const element = div({ ...elementOptions, class: 'help', onInput }, [
+		table({ class: 'infoTable' }, [
 			tr([
 				td('Next page'),
 				td([ kbd('Space'), ' ', kbd('►'), ' ', kbd('▼'), ' ', kbd('Page Down') ]),
@@ -114,12 +123,11 @@ export default function Help (options?: HelpOptions, children?: RenderChildren) 
 			]),
 		]),
 
-		div({ className: 'row' }, [
-			div({ className: 'column colorControls' }, [
+		div({ class: 'row' }, [
+			div({ class: 'column colorControls' }, [
 				label([
 					input({
 						ref: refs.textColorInput,
-						id: 'textColorInput',
 						type: 'color',
 						value: config.textColor,
 					}),
@@ -128,7 +136,6 @@ export default function Help (options?: HelpOptions, children?: RenderChildren) 
 				label([
 					input({
 						ref: refs.backgroundColorInput,
-						id: 'backgroundColorInput',
 						type: 'color',
 						value: config.backgroundColor,
 					}),
@@ -137,7 +144,6 @@ export default function Help (options?: HelpOptions, children?: RenderChildren) 
 				label([
 					input({
 						ref: refs.visraamColorInput,
-						id: 'visraamColorInput',
 						type: 'color',
 						value: config.visraamColor,
 					}),
@@ -146,7 +152,6 @@ export default function Help (options?: HelpOptions, children?: RenderChildren) 
 				label([
 					input({
 						ref: refs.visraamColorYamkiInput,
-						id: 'textColorInput',
 						type: 'color',
 						value: config.visraamColorYamki,
 					}),
@@ -154,8 +159,8 @@ export default function Help (options?: HelpOptions, children?: RenderChildren) 
 				]),
 			]),
 
-			div({ className: 'column colorButtons' }, [
-				button({ ref: refs.resetButton, className: 'buttonSecondary', onClick: resetColors },
+			div({ class: 'column colorButtons' }, [
+				button({ ref: refs.resetButton, class: 'buttonSecondary', onClick: resetColors },
 					'Reset'
 				),
 				button({ ref: refs.saveColorsButton, onClick: saveColors },
@@ -167,16 +172,16 @@ export default function Help (options?: HelpOptions, children?: RenderChildren) 
 		hr(),
 
 		label([
-			input({ ref: refs.visraamCheckbox, id: 'visraamCheckbox', type: 'checkbox', onClick: toggleVisraam }),
+			input({ ref: refs.visraamCheckbox, type: 'checkbox', onClick: toggleVisraam }),
 			'Show visraam',
 		]),
 		div([
 			label([
 				'Go to page: ',
-				input({ id: 'gotoPage', type: 'number' }),
+				input({ ref: refs.gotoPageInput, type: 'number' }),
 			]),
 			' ',
-			button({ id: 'gotoPageButton', type: 'button' }, 'Go'),
+			button({ type: 'button', onClick: onClickGotoPage }, 'Go'),
 		]),
 	]);
 
@@ -190,12 +195,14 @@ export default function Help (options?: HelpOptions, children?: RenderChildren) 
 			return element.hidden;
 		},
 
-		hide () {
-			element.hidden = true;
-		},
+		set hidden (value: boolean) {
+			element.hidden = value;
 
-		show () {
-			element.hidden = false;
+			if (value === false) {
+				refs.visraamCheckbox.checked = Boolean(config.showVisraam);
+				refs.gotoPageInput.placeholder = String(config.currentPage);
+				refs.gotoPageInput.focus();
+			}
 		},
 
 		get textColor () {

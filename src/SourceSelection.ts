@@ -10,8 +10,7 @@ import {
 } from './tizi.js';
 
 export interface SourceSelectionController extends Controller {
-	hide(): void;
-	show(): void;
+	hidden: boolean;
 }
 
 export interface SourceSelectionOptions extends ComponentOptions<HTMLDivElement, SourceSelectionController> {
@@ -25,9 +24,9 @@ export default function SourceSelection (options: SourceSelectionOptions, childr
 		...elementOptions
 	} = options;
 
-	const element = div({ ...elementOptions, className: 'sourceSelection' }, [
-		button({ 'data-source': 'G', className: 'source' }, 'ਸ੍ਰੀ ਗੁਰੂ ਗ੍ਰੰਥ ਸਾਹਿਬ ਜੀ'),
-		button({ 'data-source': 'D', className: 'source' }, 'ਸ੍ਰੀ ਦਸਮ ਗ੍ਰੰਥ ਸਾਹਿਬ ਜੀ'),
+	const element = div({ ...elementOptions, class: 'sourceSelection' }, [
+		button({ 'data-source': 'G', class: 'source' }, 'ਸ੍ਰੀ ਗੁਰੂ ਗ੍ਰੰਥ ਸਾਹਿਬ ਜੀ'),
+		button({ 'data-source': 'D', class: 'source' }, 'ਸ੍ਰੀ ਦਸਮ ਗ੍ਰੰਥ ਸਾਹਿਬ ਜੀ'),
 		p([ 'Choose what you want to read; while reading press ', kbd('h'), ' for help' ]),
 	]);
 
@@ -47,12 +46,12 @@ export default function SourceSelection (options: SourceSelectionOptions, childr
 			element.remove();
 		},
 
-		hide () {
-			element.hidden = true;
+		get hidden () {
+			return element.hidden;
 		},
 
-		show () {
-			element.hidden = false;
+		set hidden (value: boolean) {
+			element.hidden = value;
 		},
 	});
 

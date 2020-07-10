@@ -1,54 +1,39 @@
-import { ApiPageInfo, ApiPageLine, BaniSourceData } from './interfaces.d';
+import { ApiPageInfo, ApiPageLine } from './interfaces.d';
 import { Config } from './Config.js';
 import {
 	ComponentOptions,
+	Controller,
 	RenderChildren,
 	createRef,
+	render,
 	main,
 	section,
-	render,
 } from './tizi.js';
 
 const MAX_RENDERED_PAGES = 3;
 
-function parseApiLine (this: Reader, apiLine: ApiPageLine) {
-	let line = apiLine.verse.gurmukhi;
+const nextKeys = new Set([
+	'ArrowDown',
+	'ArrowRight',
+	'PageDown',
+	' ',
+]);
 
-	const visraamMap = apiLine.visraam.sttm.reduce((sum: any, { p, t }) => {
-		sum[p] = t;
+const previousKeys = new Set([
+	'ArrowLeft',
+	'ArrowUp',
+	'PageUp',
+]);
 
-		return sum;
-	}, {});
-
-	line = line.split(' ').map((word, index) => {
-		if (visraamMap[index] === 'v') {
-			return `<span class="visraam-main">${word}</span><wbr>`;
-		}
-		else if (visraamMap[index] === 'y') {
-			return `<span class="visraam-yamki">${word}</span>`;
-		}
-		else {
-			return word;
-		}
-	}).join(' ');
-
-	if (apiLine.shabadId !== this.config.currentShabadId) {
-		this.config.currentShabadId = apiLine.shabadId;
-		line = `<br><center>${line}</center>`;
-	}
-
-	return line;
+export interface ReaderController extends Controller {
+	gotoPage (page: number): void;
+	hidden: boolean;
+	render (): Promise<void>;
+	showVisraam: boolean;
 }
 
-export interface ReaderOptions extends ComponentOptions<HTMLElement> {
+export interface ReaderOptions extends ComponentOptions<HTMLElement, ReaderController> {
 	config: Config
-}
-
-export interface ReaderState {
-	/**
-	 * Guard to prevent further navigation while navigation is in progress
-	 */
-	isNavigating: boolean;
 }
 
 export default function Reader (options: ReaderOptions, children?: RenderChildren) {
@@ -57,137 +42,117 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 		ref,
 		...elementOptions
 	} = options;
-
 	const refs = {
 		main: createRef<HTMLElement>(),
-		pages: [ createRef<HTMLElement>(), createRef<HTMLElement>(), createRef<HTMLElement>() ],
+		sizingNode: createRef<HTMLElement>(),
 	};
 
-	const element = main({ ref: refs.main, className: 'reader', ...elementOptions }, [
-		section({ ref: refs.pages[0], className: 'page' }),
-		section({ ref: refs.pages[1], className: 'page' }),
-		section({ ref: refs.pages[2], className: 'page' }),
+	const element = main({ ref: refs.main, class: 'reader', ...elementOptions }, [
+		section({ ref: refs.sizingNode, class: 'page' }),
 	]);
 
-	render(element, options, children);
-
-	return element;
-}
-
-export class ReaderC {
-	protected _pageNodes: HTMLElement[];
-	protected _rootNode: HTMLElement;
-	protected _sizingNode: HTMLElement;
-
-	config: BaniSourceData & { source?: string };
-	source: string;
-
-	state = {
-		isNavigating: false,
-	} as ReaderState;
-
-	constructor (rootNode: HTMLElement, options: ReaderOptions) {
-		this._rootNode = rootNode;
-		this.config = options.config;
-		this._pageNodes = [];
-
-		this._sizingNode = document.createElement('section');
-		this._sizingNode.className = 'page';
-		rootNode.appendChild(this._sizingNode);
-
-		this._pageNodes.push(this._sizingNode.cloneNode() as HTMLElement);
-		this._pageNodes.push(this._sizingNode.cloneNode() as HTMLElement);
-		this._pageNodes.push(this._sizingNode.cloneNode() as HTMLElement);
+	const pageNodes: HTMLElement[] = [];
+	for (let i = 0; i < MAX_RENDERED_PAGES; i++) {
+		pageNodes.push(refs.sizingNode.node.cloneNode() as HTMLElement);
 	}
 
-	async render () {
-		this.showVisraam(this.config.showVisraam);
+	render(element, options, children, {
+		destroy () {
+			document.body.removeEventListener('keyup', onKeyUp);
+		},
 
-		const currentPageNode = this._pageNodes[this.config.displayedPage];
-		currentPageNode.classList.add('currentPage');
-		this._rootNode.appendChild(currentPageNode);
+		gotoPage,
 
-		for (let i = this.config.displayedPage; i < MAX_RENDERED_PAGES; i++) {
-			await this._renderPage(i);
-		}
-	}
+		render: renderCurrentPage,
 
-	async gotoPage (pageNumber: number) {
-		this.config.renderedPages = [];
-		this.config.currentPage = pageNumber;
-		this.render();
-	}
+		get hidden () {
+			return element.hidden;
+		},
 
-	async gotoNextPage () {
-		if (this.state.isNavigating) {
+		set hidden (value: boolean) {
+			element.hidden = value;
+
+			if (value === false) {
+				element.classList.toggle('visraam', Boolean(config.showVisraam));
+			}
+		},
+
+		get showVisraam () {
+			return element.classList.contains('visraam');
+		},
+
+		set showVisraam (value: boolean) {
+			element.classList.toggle('visraam', value);
+		},
+	});
+
+	// Guard to prevent further navigation while navigation is in progress
+	let isNavigating = false;
+	async function gotoNextPage () {
+		if (isNavigating) {
 			return;
 		}
 
-		this.state.isNavigating = true;
+		isNavigating = true;
 
-		const previousPageNode = this._pageNodes[this.config.displayedPage];
-		if (this.config.displayedPage === 0) {
-			this.config.displayedPage = 1;
+		const previousPageNode = pageNodes[config.displayedPage];
+		if (config.displayedPage === 0) {
+			config.displayedPage = 1;
 		}
 		else {
-			this._pageNodes.push(this._pageNodes.shift());
-			this.config.renderedPages.push(this.config.renderedPages.shift());
-			this.config.renderedPages[2] = '';
-			this.config.renderedPages = [ ...this.config.renderedPages ];
+			pageNodes.push(pageNodes.shift());
+			config.renderedPages.push(config.renderedPages.shift());
+			config.renderedPages[2] = '';
 		}
-		const currentPageNode = this._pageNodes[this.config.displayedPage];
+		const currentPageNode = pageNodes[config.displayedPage];
 
 		previousPageNode.classList.remove('currentPage');
 		currentPageNode.classList.add('currentPage');
-		this._rootNode.removeChild(previousPageNode);
-		this._rootNode.appendChild(currentPageNode);
+		element.removeChild(previousPageNode);
+		element.appendChild(currentPageNode);
 
-		await this._renderPage(2);
+		await renderPage(2);
 
-		this.state.isNavigating = false;
+		isNavigating = false;
 	}
 
-	gotoPreviousPage () {
-		if (this.state.isNavigating || this.config.displayedPage === 0) {
+	function gotoPreviousPage () {
+		if (isNavigating || config.displayedPage === 0) {
 			return;
 		}
 
-		const currentPageNode = this._pageNodes[1];
+		const currentPageNode = pageNodes[1];
 		currentPageNode.classList.remove('currentPage');
-		this._rootNode.removeChild(currentPageNode);
+		element.removeChild(currentPageNode);
 
-		const previousPageNode = this._pageNodes[0];
+		const previousPageNode = pageNodes[0];
 		previousPageNode.classList.add('currentPage');
-		this._rootNode.appendChild(previousPageNode);
+		element.appendChild(previousPageNode);
 
-		this.config.displayedPage = 0;
+		config.displayedPage = 0;
 	}
 
-	showVisraam (show: boolean) {
-		if (show) {
-			this._rootNode.classList.add('visraam');
-		}
-		else {
-			this._rootNode.classList.remove('visraam');
-		}
-	}
-
-	protected async _renderPage (pageIndex: number) {
-		let pageHtml = this.config.renderedPages[pageIndex];
+	async function renderPage (pageIndex: number) {
+		let pageHtml = config.renderedPages[pageIndex];
 		if (!pageHtml) {
-			const lines = await this._getNextPageLines();
+			const lines = await getNextPageLines();
 			pageHtml = lines.join('<wbr> ');
-			this.config.renderedPages[pageIndex] = pageHtml;
-			this.config.renderedPages = [ ...this.config.renderedPages ];
+			config.renderedPages[pageIndex] = pageHtml;
 		}
-		this._pageNodes[pageIndex].innerHTML = pageHtml;
+		pageNodes[pageIndex].innerHTML = pageHtml;
 	}
 
-	protected async _getNextPageLines () {
+	function reportUnsupportedBrowser () {
+		element.classList.add('unsupported');
+		element.innerHTML = `This browser does not have the necessary text rendering support.<br>Please try
+			<a href="https://www.google.com/chrome/">Google Chrome</a>`;
+	}
+
+	async function getNextPageLines () {
 		const lines = [];
 
-		while(this._sizingNode.offsetHeight <= this._rootNode.offsetHeight) {
-			let line = await this._getNextLine();
+		while (refs.sizingNode.offsetHeight <= element.offsetHeight) {
+			let line = await getNextLine(); // eslint-disable-line no-await-in-loop
 
 			// strip unnecessary <br> if a shabad break occurs at the top of a page
 			if (lines.length === 0 && line.startsWith('<br>')) {
@@ -195,47 +160,97 @@ export class ReaderC {
 			}
 
 			lines.push(line);
-			this._sizingNode.innerHTML += ` ${line}<wbr>`;
+			refs.sizingNode.innerHTML += ` ${line}<wbr>`;
 		}
 
-		if (this._sizingNode.offsetHeight > this._rootNode.offsetHeight) {
-			this.config.lineCache.unshift(lines.pop());
-			this.config.lineCache = [ ...this.config.lineCache ];
+		if (refs.sizingNode.offsetHeight > element.offsetHeight) {
+			config.lineCache.unshift(lines.pop());
 		}
 
-		if (this._sizingNode.offsetWidth > this._rootNode.offsetWidth) {
-			this._reportUnsupportedBrowser();
+		if (refs.sizingNode.offsetWidth > element.offsetWidth) {
+			reportUnsupportedBrowser();
 
 			return [];
 		}
 
-		this._sizingNode.innerHTML = '';
+		refs.sizingNode.innerHTML = '';
 
 		return lines;
 	}
 
-	protected async _getNextLine () {
-		if (!this.config.lineCache.length) {
-			const pageInfo = await this._getNextPage();
-			this.config.lineCache = pageInfo.page.map(parseApiLine, this);
+	function parseApiLine (apiLine: ApiPageLine) {
+		let line = apiLine.verse.gurmukhi;
+
+		const visraamMap = apiLine.visraam.sttm.reduce((sum: Record<number, string>, { p, t }) => {
+			sum[p] = t;
+
+			return sum;
+		}, {});
+
+		line = line.split(' ').map((word, index) => {
+			if (visraamMap[index] === 'v') {
+				return `<span class="visraam-main">${word}</span><wbr>`;
+			}
+			else if (visraamMap[index] === 'y') {
+				return `<span class="visraam-yamki">${word}</span>`;
+			}
+			else {
+				return word;
+			}
+		}).join(' ');
+
+		if (apiLine.shabadId !== config.currentShabadId) {
+			config.currentShabadId = apiLine.shabadId;
+			line = `<br><center>${line}</center>`;
 		}
 
-		const nextLine = this.config.lineCache.shift();
-		this.config.lineCache = [ ...this.config.lineCache ];
-
-		return nextLine;
+		return line;
 	}
 
-	protected async _getNextPage (): Promise<ApiPageInfo> {
-		const apiResponse = await fetch(`https://api.banidb.com/v2/angs/${this.config.currentPage}/${this.config.source}`);
-		this.config.currentPage += 1;
+	async function getNextLine () {
+		if (!config.lineCache.length) {
+			const pageInfo = await getNextPage();
+			config.lineCache = pageInfo.page.map(parseApiLine);
+		}
+
+		return config.lineCache.shift();
+	}
+
+	async function getNextPage (): Promise<ApiPageInfo> {
+		const apiResponse = await fetch(`https://api.banidb.com/v2/angs/${config.currentPage}/${config.source}`);
+		config.currentPage += 1;
 
 		return apiResponse.json();
 	}
 
-	protected _reportUnsupportedBrowser () {
-		this._rootNode.classList.add('unsupported');
-		this._rootNode.innerHTML = `This browser does not have the necessary text rendering support.<br>Please try
-			<a href="https://www.google.com/chrome/">Google Chrome</a>`;
+	async function renderCurrentPage () {
+		const currentPageNode = pageNodes[config.displayedPage];
+		currentPageNode.classList.add('currentPage');
+		element.appendChild(currentPageNode);
+
+		for (let i = config.displayedPage; i < MAX_RENDERED_PAGES; i++) {
+			await renderPage(i); // eslint-disable-line no-await-in-loop
+		}
 	}
+
+	async function gotoPage (pageNumber: number) {
+		config.displayedPage = 0;
+		config.lineCache = [];
+		config.renderedPages = [];
+		config.currentPage = pageNumber;
+		renderCurrentPage();
+	}
+
+	function onKeyUp (event: KeyboardEvent) {
+		if (nextKeys.has(event.key)) {
+			gotoNextPage();
+		}
+		else if (previousKeys.has(event.key)) {
+			gotoPreviousPage();
+		}
+	}
+
+	document.body.addEventListener('keyup', onKeyUp);
+
+	return element;
 }

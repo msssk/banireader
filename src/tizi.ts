@@ -45,6 +45,7 @@ export const RefControllerSymbol = Symbol('RefControllerSymbol');
  */
 export type Ref<E extends Node = Node> = {
 	[RefElementSymbol]: E;
+	node: E;
 };
 
 export function createRef<T extends Node> (): T & Ref<T> {
@@ -52,15 +53,26 @@ export function createRef<T extends Node> (): T & Ref<T> {
 
 	return new Proxy(ref, {
 		get (target, key) {
-			if (key === RefElementSymbol) {
+			if (key === RefElementSymbol || key === 'node') {
 				return target[RefElementSymbol];
 			}
 			else {
-				return target[RefElementSymbol][key];
+				let value = target[RefElementSymbol][key];
+				// TODO: this is probably not a great workaround for the problem that you can't call instance methods
+				// when the context has been changed from the instance to a Proxy.
+				if (typeof value === 'function') {
+					value = value.bind(target[RefElementSymbol]);
+				}
+
+				return value;
 			}
 		},
 
 		set (target, key, value) {
+			if (key === 'node') {
+				return false;
+			}
+
 			if (key === RefElementSymbol) {
 				target[RefElementSymbol] = value;
 			}
@@ -140,9 +152,6 @@ const eventHandlerRegex = /^on[A-Z][a-zA-Z]+$/;
 function applyOptions (node: Node, options: ElementOptions) {
 	Object.keys(options).forEach(function (key) {
 		const value = options[key];
-		if (key === 'className') {
-			key = 'class';
-		}
 
 		if (eventHandlerRegex.test(key)) {
 			const [ eventListener, eventListenerOptions ] = (Array.isArray(value) ?
