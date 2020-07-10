@@ -1,147 +1,178 @@
+import { createRef, render, main, section, } from './tizi.js';
 const MAX_RENDERED_PAGES = 3;
-function parseApiLine(apiLine) {
-    let line = apiLine.verse.gurmukhi;
-    const visraamMap = apiLine.visraam.sttm.reduce((sum, { p, t }) => {
-        sum[p] = t;
-        return sum;
-    }, {});
-    line = line.split(' ').map((word, index) => {
-        if (visraamMap[index] === 'v') {
-            return `<span class="visraam-main">${word}</span><wbr>`;
-        }
-        else if (visraamMap[index] === 'y') {
-            return `<span class="visraam-yamki">${word}</span>`;
-        }
-        else {
-            return word;
-        }
-    }).join(' ');
-    if (apiLine.shabadId !== this.config.currentShabadId) {
-        this.config.currentShabadId = apiLine.shabadId;
-        line = `<br><center>${line}</center>`;
+const nextKeys = new Set([
+    'ArrowDown',
+    'ArrowRight',
+    'PageDown',
+    ' ',
+]);
+const previousKeys = new Set([
+    'ArrowLeft',
+    'ArrowUp',
+    'PageUp',
+]);
+export default function Reader(options, children) {
+    const { config, ref, ...elementOptions } = options;
+    const refs = {
+        main: createRef(),
+        sizingNode: createRef(),
+    };
+    const element = main({ ref: refs.main, class: 'reader', ...elementOptions }, [
+        section({ ref: refs.sizingNode, class: 'page' }),
+    ]);
+    const pageNodes = [];
+    for (let i = 0; i < MAX_RENDERED_PAGES; i++) {
+        pageNodes.push(refs.sizingNode.node.cloneNode());
     }
-    return line;
-}
-export class Reader {
-    constructor(rootNode, options) {
-        this.state = {
-            isNavigating: false,
-        };
-        this._rootNode = rootNode;
-        this.config = options.config;
-        this._pageNodes = [];
-        this._sizingNode = document.createElement('section');
-        this._sizingNode.className = 'page';
-        rootNode.appendChild(this._sizingNode);
-        this._pageNodes.push(this._sizingNode.cloneNode());
-        this._pageNodes.push(this._sizingNode.cloneNode());
-        this._pageNodes.push(this._sizingNode.cloneNode());
-    }
-    async render() {
-        this.showVisraam(this.config.showVisraam);
-        const currentPageNode = this._pageNodes[this.config.displayedPage];
-        currentPageNode.classList.add('currentPage');
-        this._rootNode.appendChild(currentPageNode);
-        for (let i = this.config.displayedPage; i < MAX_RENDERED_PAGES; i++) {
-            await this._renderPage(i);
-        }
-    }
-    async gotoPage(pageNumber) {
-        this.config.renderedPages = [];
-        this.config.currentPage = pageNumber;
-        this.render();
-    }
-    async gotoNextPage() {
-        if (this.state.isNavigating) {
+    render(element, options, children, {
+        destroy() {
+            document.body.removeEventListener('keyup', onKeyUp);
+        },
+        gotoPage,
+        render: renderCurrentPage,
+        get hidden() {
+            return element.hidden;
+        },
+        set hidden(value) {
+            element.hidden = value;
+            if (value === false) {
+                element.classList.toggle('visraam', Boolean(config.showVisraam));
+            }
+        },
+        get showVisraam() {
+            return element.classList.contains('visraam');
+        },
+        set showVisraam(value) {
+            element.classList.toggle('visraam', value);
+        },
+    });
+    let isNavigating = false;
+    async function gotoNextPage() {
+        if (isNavigating) {
             return;
         }
-        this.state.isNavigating = true;
-        const previousPageNode = this._pageNodes[this.config.displayedPage];
-        if (this.config.displayedPage === 0) {
-            this.config.displayedPage = 1;
+        isNavigating = true;
+        const previousPageNode = pageNodes[config.displayedPage];
+        if (config.displayedPage === 0) {
+            config.displayedPage = 1;
         }
         else {
-            this._pageNodes.push(this._pageNodes.shift());
-            this.config.renderedPages.push(this.config.renderedPages.shift());
-            this.config.renderedPages[2] = '';
-            this.config.renderedPages = [...this.config.renderedPages];
+            pageNodes.push(pageNodes.shift());
+            config.renderedPages.push(config.renderedPages.shift());
+            config.renderedPages[2] = '';
         }
-        const currentPageNode = this._pageNodes[this.config.displayedPage];
+        const currentPageNode = pageNodes[config.displayedPage];
         previousPageNode.classList.remove('currentPage');
         currentPageNode.classList.add('currentPage');
-        this._rootNode.removeChild(previousPageNode);
-        this._rootNode.appendChild(currentPageNode);
-        await this._renderPage(2);
-        this.state.isNavigating = false;
+        element.removeChild(previousPageNode);
+        element.appendChild(currentPageNode);
+        await renderPage(2);
+        isNavigating = false;
     }
-    gotoPreviousPage() {
-        if (this.state.isNavigating || this.config.displayedPage === 0) {
+    function gotoPreviousPage() {
+        if (isNavigating || config.displayedPage === 0) {
             return;
         }
-        const currentPageNode = this._pageNodes[1];
+        const currentPageNode = pageNodes[1];
         currentPageNode.classList.remove('currentPage');
-        this._rootNode.removeChild(currentPageNode);
-        const previousPageNode = this._pageNodes[0];
+        element.removeChild(currentPageNode);
+        const previousPageNode = pageNodes[0];
         previousPageNode.classList.add('currentPage');
-        this._rootNode.appendChild(previousPageNode);
-        this.config.displayedPage = 0;
+        element.appendChild(previousPageNode);
+        config.displayedPage = 0;
     }
-    showVisraam(show) {
-        if (show) {
-            this._rootNode.classList.add('visraam');
-        }
-        else {
-            this._rootNode.classList.remove('visraam');
-        }
-    }
-    async _renderPage(pageIndex) {
-        let pageHtml = this.config.renderedPages[pageIndex];
+    async function renderPage(pageIndex) {
+        let pageHtml = config.renderedPages[pageIndex];
         if (!pageHtml) {
-            const lines = await this._getNextPageLines();
+            const lines = await getNextPageLines();
             pageHtml = lines.join('<wbr> ');
-            this.config.renderedPages[pageIndex] = pageHtml;
-            this.config.renderedPages = [...this.config.renderedPages];
+            config.renderedPages[pageIndex] = pageHtml;
         }
-        this._pageNodes[pageIndex].innerHTML = pageHtml;
+        pageNodes[pageIndex].innerHTML = pageHtml;
     }
-    async _getNextPageLines() {
+    function reportUnsupportedBrowser() {
+        element.classList.add('unsupported');
+        element.innerHTML = `This browser does not have the necessary text rendering support.<br>Please try
+			<a href="https://www.google.com/chrome/">Google Chrome</a>`;
+    }
+    async function getNextPageLines() {
         const lines = [];
-        while (this._sizingNode.offsetHeight <= this._rootNode.offsetHeight) {
-            let line = await this._getNextLine();
+        while (refs.sizingNode.offsetHeight <= element.offsetHeight) {
+            let line = await getNextLine();
             if (lines.length === 0 && line.startsWith('<br>')) {
                 line = line.substr(4);
             }
             lines.push(line);
-            this._sizingNode.innerHTML += ` ${line}<wbr>`;
+            refs.sizingNode.innerHTML += ` ${line}<wbr>`;
         }
-        if (this._sizingNode.offsetHeight > this._rootNode.offsetHeight) {
-            this.config.lineCache.unshift(lines.pop());
-            this.config.lineCache = [...this.config.lineCache];
+        if (refs.sizingNode.offsetHeight > element.offsetHeight) {
+            config.lineCache.unshift(lines.pop());
         }
-        if (this._sizingNode.offsetWidth > this._rootNode.offsetWidth) {
-            this._reportUnsupportedBrowser();
+        if (refs.sizingNode.offsetWidth > element.offsetWidth) {
+            reportUnsupportedBrowser();
             return [];
         }
-        this._sizingNode.innerHTML = '';
+        refs.sizingNode.innerHTML = '';
         return lines;
     }
-    async _getNextLine() {
-        if (!this.config.lineCache.length) {
-            const pageInfo = await this._getNextPage();
-            this.config.lineCache = pageInfo.page.map(parseApiLine, this);
+    function parseApiLine(apiLine) {
+        let line = apiLine.verse.gurmukhi;
+        const visraamMap = apiLine.visraam.sttm.reduce((sum, { p, t }) => {
+            sum[p] = t;
+            return sum;
+        }, {});
+        line = line.split(' ').map((word, index) => {
+            if (visraamMap[index] === 'v') {
+                return `<span class="visraam-main">${word}</span><wbr>`;
+            }
+            else if (visraamMap[index] === 'y') {
+                return `<span class="visraam-yamki">${word}</span>`;
+            }
+            else {
+                return word;
+            }
+        }).join(' ');
+        if (apiLine.shabadId !== config.currentShabadId) {
+            config.currentShabadId = apiLine.shabadId;
+            line = `<br><center>${line}</center>`;
         }
-        const nextLine = this.config.lineCache.shift();
-        this.config.lineCache = [...this.config.lineCache];
-        return nextLine;
+        return line;
     }
-    async _getNextPage() {
-        const apiResponse = await fetch(`https://api.banidb.com/v2/angs/${this.config.currentPage}/${this.config.source}`);
-        this.config.currentPage += 1;
+    async function getNextLine() {
+        if (!config.lineCache.length) {
+            const pageInfo = await getNextPage();
+            config.lineCache = pageInfo.page.map(parseApiLine);
+        }
+        return config.lineCache.shift();
+    }
+    async function getNextPage() {
+        const apiResponse = await fetch(`https://api.banidb.com/v2/angs/${config.currentPage}/${config.source}`);
+        config.currentPage += 1;
         return apiResponse.json();
     }
-    _reportUnsupportedBrowser() {
-        this._rootNode.classList.add('unsupported');
-        this._rootNode.innerHTML = `This browser does not have the necessary text rendering support.<br>Please try
-			<a href="https://www.google.com/chrome/">Google Chrome</a>`;
+    async function renderCurrentPage() {
+        const currentPageNode = pageNodes[config.displayedPage];
+        currentPageNode.classList.add('currentPage');
+        element.appendChild(currentPageNode);
+        for (let i = config.displayedPage; i < MAX_RENDERED_PAGES; i++) {
+            await renderPage(i);
+        }
     }
+    async function gotoPage(pageNumber) {
+        config.displayedPage = 0;
+        config.lineCache = [];
+        config.renderedPages = [];
+        config.currentPage = pageNumber;
+        renderCurrentPage();
+    }
+    function onKeyUp(event) {
+        if (nextKeys.has(event.key)) {
+            gotoNextPage();
+        }
+        else if (previousKeys.has(event.key)) {
+            gotoPreviousPage();
+        }
+    }
+    document.body.addEventListener('keyup', onKeyUp);
+    return element;
 }
