@@ -94,6 +94,11 @@ body {
 	z-index: 1000;
 }
 
+.help .darknessRangeInput {
+	flex-grow: 1;
+	margin: 0 5px;
+}
+
 .help input[type='number'] {
 	background-color: hsl(201, 34%, 58%);
 	border: 1px solid hsl(201, 34%, 25%);

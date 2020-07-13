@@ -41,7 +41,10 @@ export const RefElementSymbol = Symbol('RefElementSymbol');
 export const RefControllerSymbol = Symbol('RefControllerSymbol');
 
 /**
- * An object that stores a Node in `RefElementSymbol` and proxies the Node's properties
+ * An object that stores a Node in `RefElementSymbol` and proxies the Node's properties. The node is also
+ * accessible on the `node` property (e.g. for direct equality comparisons). For the sake of convenience most
+ * node properties can be accessed through the proxy. The proxy will bind functions to the node so they are executed
+ * in the correct context.
  */
 export type Ref<E extends Node = Node> = {
 	[RefElementSymbol]: E;

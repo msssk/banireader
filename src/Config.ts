@@ -88,7 +88,11 @@ export default function createConfig (options: ConfigOptions): Config {
 			}
 		},
 
-		set (target, property, value) {
+		set (target, property, value, receiver) {
+			if (value === receiver[property]) {
+				return true;
+			}
+
 			if (Array.isArray(value)) {
 				value = createArrayProxy(value);
 			}

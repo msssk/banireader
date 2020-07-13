@@ -1,4 +1,5 @@
 import { ApiPageInfo, ApiPageLine } from './interfaces.d';
+import { isContinuousShabad } from './bani.js';
 import { Config } from './Config.js';
 import {
 	ComponentOptions,
@@ -24,6 +25,18 @@ const previousKeys = new Set([
 	'ArrowUp',
 	'PageUp',
 ]);
+
+function withWordBreak (sum: string, line: string, index: number, array: string[]) {
+	sum = sum || '';
+	if (index === array.length - 1 || line.endsWith('>')) {
+		sum += line;
+	}
+	else {
+		sum += `${line}<wbr> `;
+	}
+
+	return sum;
+}
 
 export interface ReaderController extends Controller {
 	gotoPage (page: number): void;
@@ -136,7 +149,7 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 		let pageHtml = config.renderedPages[pageIndex];
 		if (!pageHtml) {
 			const lines = await getNextPageLines();
-			pageHtml = lines.join('<wbr> ');
+			pageHtml = lines.reduce(withWordBreak);
 			config.renderedPages[pageIndex] = pageHtml;
 		}
 		pageNodes[pageIndex].innerHTML = pageHtml;
@@ -178,6 +191,9 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 		return lines;
 	}
 
+	const IkOngkar = '<>';
+	let breakNextLine = false;
+	let previousLineIsHeading = false;
 	function parseApiLine (apiLine: ApiPageLine) {
 		let line = apiLine.verse.gurmukhi;
 
@@ -199,9 +215,22 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 			}
 		}).join(' ');
 
-		if (apiLine.shabadId !== config.currentShabadId) {
+		const isHeadingLine = line.startsWith(IkOngkar);
+		if (breakNextLine || isHeadingLine ||
+			(apiLine.shabadId !== config.currentShabadId &&
+				!isContinuousShabad(config.currentShabadId, apiLine.shabadId, config.source))
+			)
+		{
+			line = `${(breakNextLine || previousLineIsHeading) ? '' : '<br>'}<center>${line}</center>`;
+			previousLineIsHeading = true;
+		}
+		else {
+			previousLineIsHeading = false;
+		}
+		breakNextLine = isHeadingLine;
+
+		if (config.currentShabadId !== apiLine.shabadId) {
 			config.currentShabadId = apiLine.shabadId;
-			line = `<br><center>${line}</center>`;
 		}
 
 		return line;
@@ -234,6 +263,8 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 	}
 
 	async function gotoPage (pageNumber: number) {
+		breakNextLine = false;
+		previousLineIsHeading = false;
 		config.displayedPage = 0;
 		config.lineCache = [];
 		config.renderedPages = [];
