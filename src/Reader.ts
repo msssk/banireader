@@ -1,4 +1,4 @@
-import { ApiPageInfo, ApiPageLine } from './interfaces.d';
+import { ApiPageInfo, ApiPageLine, BaniLine } from './interfaces.d';
 import { isContinuousShabad } from './bani.js';
 import { Config } from './Config.js';
 import {
@@ -11,6 +11,11 @@ import {
 	section,
 } from './tizi.js';
 
+const TOTAL_PAGES = {
+	G: 1430,
+	D: 1428,
+};
+const INVALID_SHABAD_ID = -1;
 const MAX_RENDERED_PAGES = 3;
 
 const nextKeys = new Set([
@@ -26,13 +31,12 @@ const previousKeys = new Set([
 	'PageUp',
 ]);
 
-function withWordBreak (sum: string, line: string, index: number, array: string[]) {
-	sum = sum || '';
-	if (index === array.length - 1 || line.endsWith('>')) {
-		sum += line;
+function withWordBreak (sum: string, line: BaniLine, index: number, array: BaniLine[]) {
+	if (index === array.length - 1 || line.text.endsWith('>')) {
+		sum += `${line.text}`;
 	}
 	else {
-		sum += `${line}<wbr> `;
+		sum += `${line.text}<wbr> `;
 	}
 
 	return sum;
@@ -64,6 +68,10 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 		section({ ref: refs.sizingNode, class: 'page' }),
 	]);
 
+	/**
+	 * The currently rendered pages. There are up to 3. `renderPage` will keep up to 2 pages ahead pre-rendered
+	 * for quick navigation. Navigation one page backwards can be done, but no more than 1.
+	 */
 	const pageNodes: HTMLElement[] = [];
 	for (let i = 0; i < MAX_RENDERED_PAGES; i++) {
 		pageNodes.push(refs.sizingNode.node.cloneNode() as HTMLElement);
@@ -106,18 +114,27 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 			return;
 		}
 
+		// If the following page is empty then we are at the last page
+		if (!pageNodes[config.activeRenderedPage + 1].innerHTML) {
+			return;
+		}
+
 		isNavigating = true;
 
-		const previousPageNode = pageNodes[config.displayedPage];
-		if (config.displayedPage === 0) {
-			config.displayedPage = 1;
+		const previousPageNode = pageNodes[config.activeRenderedPage];
+		// activeRenderedPage is always either the first or the second of the 3 rendered pages.
+		// Moving from 1st to 2nd we simply update the index, but moving from 2nd to 3rd (the `else` clause)
+		// we rotate the array `renderedPages` around so that we end up staying in the 2nd page
+		// and we pre-render the following page
+		if (config.activeRenderedPage === 0) {
+			config.activeRenderedPage = 1;
 		}
 		else {
 			pageNodes.push(pageNodes.shift());
 			config.renderedPages.push(config.renderedPages.shift());
 			config.renderedPages[2] = '';
 		}
-		const currentPageNode = pageNodes[config.displayedPage];
+		const currentPageNode = pageNodes[config.activeRenderedPage];
 
 		previousPageNode.classList.remove('currentPage');
 		currentPageNode.classList.add('currentPage');
@@ -130,11 +147,11 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 	}
 
 	function gotoPreviousPage () {
-		if (isNavigating || config.displayedPage === 0) {
+		if (isNavigating || config.activeRenderedPage === 0) {
 			return;
 		}
 
-		const currentPageNode = pageNodes[1];
+		const currentPageNode = pageNodes[config.activeRenderedPage];
 		currentPageNode.classList.remove('currentPage');
 		element.removeChild(currentPageNode);
 
@@ -142,14 +159,18 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 		previousPageNode.classList.add('currentPage');
 		element.appendChild(previousPageNode);
 
-		config.displayedPage = 0;
+		config.activeRenderedPage = 0;
 	}
 
+	/**
+	 * Render the specified page. Lines will be read from the cache or fetched as necessary.
+	 * @param pageIndex Index of the node within `pageNodes` to render
+	 */
 	async function renderPage (pageIndex: number) {
 		let pageHtml = config.renderedPages[pageIndex];
 		if (!pageHtml) {
 			const lines = await getNextPageLines();
-			pageHtml = lines.reduce(withWordBreak);
+			pageHtml = lines.reduce<string>(withWordBreak, '');
 			config.renderedPages[pageIndex] = pageHtml;
 		}
 		pageNodes[pageIndex].innerHTML = pageHtml;
@@ -163,20 +184,24 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 
 	async function getNextPageLines () {
 		const lines = [];
+		let line;
 
-		while (refs.sizingNode.offsetHeight <= element.offsetHeight) {
-			let line = await getNextLine(); // eslint-disable-line no-await-in-loop
+		do {
+			line = await getNextLine(); // eslint-disable-line no-await-in-loop
 
-			// strip unnecessary <br> if a shabad break occurs at the top of a page
-			if (lines.length === 0 && line.startsWith('<br>')) {
-				line = line.substr(4);
+			if (line) {
+				lines.push(line);
+				refs.sizingNode.innerHTML += `${line.text}<wbr> `;
 			}
+		} while (line && refs.sizingNode.offsetHeight <= element.offsetHeight);
 
-			lines.push(line);
-			refs.sizingNode.innerHTML += ` ${line}<wbr>`;
+		// If the line extends outside the visible boundary remove it from the page and put it back in the cache
+		if (refs.sizingNode.offsetHeight > element.offsetHeight) {
+			config.lineCache.unshift(lines.pop());
 		}
 
-		if (refs.sizingNode.offsetHeight > element.offsetHeight) {
+		// If the final line of the page begins a new shabad remove it from the page and put it back in the cache
+		if (lines.length > 1 && lines.last.shabadId !== lines[lines.length - 2].shabadId) {
 			config.lineCache.unshift(lines.pop());
 		}
 
@@ -192,48 +217,47 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 	}
 
 	const IkOngkar = '<>';
-	let breakNextLine = false;
-	let previousLineIsHeading = false;
-	function parseApiLine (apiLine: ApiPageLine) {
+	function parseApiLine (apiLine: ApiPageLine): BaniLine {
 		let line = apiLine.verse.gurmukhi;
+		const isHeadingLine = line.startsWith(IkOngkar);
 
 		const visraamMap = apiLine.visraam.sttm.reduce((sum: Record<number, string>, { p, t }) => {
 			sum[p] = t;
 
 			return sum;
-		}, {});
+		}, Object.create(null));
 
-		line = line.split(' ').map((word, index) => {
-			if (visraamMap[index] === 'v') {
-				return `<span class="visraam-main">${word}</span><wbr>`;
-			}
-			else if (visraamMap[index] === 'y') {
-				return `<span class="visraam-yamki">${word}</span>`;
-			}
-			else {
-				return word;
-			}
-		}).join(' ');
+		if (Object.keys(visraamMap).length) {
+			line = line.split(' ').map((word, index) => {
+				if (visraamMap[index] === 'v') {
+					return `<span class="visraam-main">${word}</span><wbr>`;
+				}
+				else if (visraamMap[index] === 'y') {
+					return `<span class="visraam-yamki">${word}</span>`;
+				}
+				else {
+					return word;
+				}
+			}).join(' ');
+		}
 
-		const isHeadingLine = line.startsWith(IkOngkar);
-		if (breakNextLine || isHeadingLine ||
-			(apiLine.shabadId !== config.currentShabadId &&
-				!isContinuousShabad(config.currentShabadId, apiLine.shabadId, config.source))
-			)
-		{
-			line = `${(breakNextLine || previousLineIsHeading) ? '' : '<br>'}<center>${line}</center>`;
-			previousLineIsHeading = true;
+		if (isHeadingLine || (apiLine.shabadId !== config.currentShabadId &&
+			!isContinuousShabad(config.currentShabadId, apiLine.shabadId, config.source))
+		) {
+			line = `<center>${line}</center>`;
 		}
-		else {
-			previousLineIsHeading = false;
-		}
-		breakNextLine = isHeadingLine;
 
 		if (config.currentShabadId !== apiLine.shabadId) {
 			config.currentShabadId = apiLine.shabadId;
 		}
 
-		return line;
+		return {
+			text: line,
+			lineNo: apiLine.lineNo,
+			pageNo: apiLine.pageNo,
+			shabadId: apiLine.shabadId,
+			verseId: apiLine.verseId,
+		} as BaniLine;
 	}
 
 	async function getNextLine () {
@@ -246,6 +270,10 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 	}
 
 	async function getNextPage (): Promise<ApiPageInfo> {
+		if (config.currentPage > TOTAL_PAGES[config.source as keyof typeof TOTAL_PAGES]) {
+			return Promise.resolve({ page: [] });
+		}
+
 		const apiResponse = await fetch(`https://api.banidb.com/v2/angs/${config.currentPage}/${config.source}`);
 		config.currentPage += 1;
 
@@ -253,22 +281,22 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 	}
 
 	async function renderCurrentPage () {
-		const currentPageNode = pageNodes[config.displayedPage];
+		pageNodes.forEach(node => node.classList.remove('currentPage'));
+		const currentPageNode = pageNodes[config.activeRenderedPage];
 		currentPageNode.classList.add('currentPage');
 		element.appendChild(currentPageNode);
 
-		for (let i = config.displayedPage; i < MAX_RENDERED_PAGES; i++) {
+		for (let i = config.activeRenderedPage; i < MAX_RENDERED_PAGES; i++) {
 			await renderPage(i); // eslint-disable-line no-await-in-loop
 		}
 	}
 
 	async function gotoPage (pageNumber: number) {
-		breakNextLine = false;
-		previousLineIsHeading = false;
-		config.displayedPage = 0;
+		config.activeRenderedPage = 0;
 		config.lineCache = [];
 		config.renderedPages = [];
 		config.currentPage = pageNumber;
+		config.currentShabadId = INVALID_SHABAD_ID;
 		renderCurrentPage();
 	}
 

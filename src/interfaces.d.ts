@@ -2,19 +2,30 @@ export interface ApiPageInfo {
 	page: ApiPageLine[];
 }
 
-export interface VisraamInfo {
-	p: number;
-	t: string;
-}
-
 export interface ApiPageLine {
+	lineNo: number;
+	pageNo: number;
 	shabadId: number;
 	verse: {
 		gurmukhi: string;
 	};
+	verseId: number;
 	visraam: {
 		sttm: VisraamInfo[]
 	}
+}
+
+export type BaniLine = {
+	lineNo: number;
+	pageNo: number;
+	shabadId: number;
+	text: string;
+	verseId: number;
+};
+
+export interface VisraamInfo {
+	p: number;
+	t: string;
 }
 
 export interface AppConfig {
@@ -33,15 +44,15 @@ export interface BaniSourceData {
 	/**
 	 * Index of the currently displayed page within the pageNodes array
 	 */
-	displayedPage?: 0 | 1;
+	activeRenderedPage?: 0 | 1;
 
 	/**
 	 * Cache of fetched but not yet rendered lines
 	 */
-	lineCache?: string[];
+	lineCache?: BaniLine[];
 
 	/**
-	 * Inner HTML of currently rendered pages
+	 * Inner HTML of currently rendered pages (up to 3)
 	 */
 	renderedPages?: Array<string | null>;
 

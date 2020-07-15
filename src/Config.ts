@@ -37,7 +37,7 @@ export default function createConfig (options: ConfigOptions): Config {
 	[ 'D', 'G' ].forEach(function (source) {
 		Object.assign(config[source], {
 			currentPage: 1,
-			displayedPage: 0,
+			activeRenderedPage: 0,
 			lineCache: createArrayProxy([]),
 			renderedPages: createArrayProxy([]),
 		});

@@ -1,6 +1,6 @@
 :root {
 	--element-margin: 8px;
-	--primary-font-size: 42px;
+	--primary-font-size: 54px;
 	--primay-line-height: 63px;
 	--table-border-color: #1d1b1b;
 
@@ -177,6 +177,9 @@ body {
 	padding-left: 5em;
 }
 
+/* .page must have no dimensions set so that it can grow/shrink according to content
+ * and have its dimensions measured
+ */
 .page {
 	background-color: var(--background-color);
 	padding: 1em 1em 0.5em 1em;
@@ -184,7 +187,10 @@ body {
 	z-index: 0;
 }
 
+/* .currentPage must have 100% width/height so that it always occludes the sizing node */
 .currentPage {
+	width: 100%;
+	height: 100%;
 	z-index: 1;
 }
 

@@ -1,4 +1,4 @@
-import { LCH_to_sRGB, sRGB_to_LCH } from '../../lib/css-color-4/utilities.js';
+import { LCH_to_sRGB, sRGB_to_LCH } from '../lib/css-color-4/utilities.js';
 
 const MAX_PERCENT = 100;
 
