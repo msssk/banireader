@@ -1,8 +1,11 @@
+import { adjustLightness, getLightnessRange } from './util/color.js';
 import { defaultColors } from './Config.js';
 import { createRef, render, br, button, div, hr, input, kbd, label, table, td, tr, } from './tizi.js';
+function noop() { }
 export default function Help(options, children) {
-    const { config, onChangeBackgroundColor, onChangeTextColor, onChangeVisraamColor, onChangeVisraamColorYamki, onGotoPage, onToggleVisraam, ref, ...elementOptions } = options;
+    const { config, onChangeBackgroundColor = noop, onChangeTextColor = noop, onChangeVisraamColor = noop, onChangeVisraamColorYamki = noop, onGotoPage = noop, onToggleVisraam = noop, ref, ...elementOptions } = options;
     const refs = {
+        darknessRangeInput: createRef(),
         textColorInput: createRef(),
         backgroundColorInput: createRef(),
         visraamColorInput: createRef(),
@@ -12,30 +15,55 @@ export default function Help(options, children) {
         saveColorsButton: createRef(),
         gotoPageInput: createRef(),
     };
+    const initialColors = {
+        backgroundColor: config.backgroundColor,
+        textColor: config.textColor,
+        visraamColor: config.visraamColor,
+        visraamColorYamki: config.visraamColorYamki,
+    };
+    const lightnessRange = getLightnessRange([
+        config.backgroundColor,
+        config.textColor,
+        config.visraamColor,
+        config.visraamColorYamki,
+    ]);
+    const rangeOptions = {
+        min: 0,
+        max: lightnessRange.min + (100 - lightnessRange.max),
+        value: lightnessRange.min,
+    };
+    rangeOptions.step = rangeOptions.max / 100;
     function onInput(event) {
         const target = event.target;
         if (target === refs.textColorInput.node) {
-            onChangeTextColor && onChangeTextColor(refs.textColorInput.value);
+            onChangeTextColor(refs.textColorInput.value);
         }
         else if (target === refs.backgroundColorInput.node) {
-            onChangeBackgroundColor && onChangeBackgroundColor(refs.backgroundColorInput.value);
+            onChangeBackgroundColor(refs.backgroundColorInput.value);
         }
         else if (target === refs.visraamColorInput.node) {
-            onChangeVisraamColor && onChangeVisraamColor(refs.visraamColorInput.value);
+            onChangeVisraamColor(refs.visraamColorInput.value);
         }
         else if (target === refs.visraamColorYamkiInput.node) {
-            onChangeVisraamColorYamki && onChangeVisraamColorYamki(refs.visraamColorYamkiInput.value);
+            onChangeVisraamColorYamki(refs.visraamColorYamkiInput.value);
+        }
+        else if (target === refs.darknessRangeInput.node) {
+            const lightnessDelta = refs.darknessRangeInput.valueAsNumber - lightnessRange.min;
+            onChangeBackgroundColor(adjustLightness(initialColors.backgroundColor, lightnessDelta));
+            onChangeTextColor(adjustLightness(initialColors.textColor, lightnessDelta));
+            onChangeVisraamColor(adjustLightness(initialColors.visraamColor, lightnessDelta));
+            onChangeVisraamColorYamki(adjustLightness(initialColors.visraamColorYamki, lightnessDelta));
         }
     }
     function resetColors() {
         refs.backgroundColorInput.value = defaultColors.backgroundColor;
         refs.textColorInput.value = defaultColors.textColor;
         refs.visraamColorInput.value = defaultColors.visraamColor;
-        refs.visraamColorYamkiInput.value = defaultColors.visraamColor;
-        onChangeBackgroundColor && onChangeBackgroundColor(defaultColors.backgroundColor);
-        onChangeTextColor && onChangeTextColor(defaultColors.textColor);
-        onChangeVisraamColor && onChangeVisraamColor(defaultColors.visraamColor);
-        onChangeVisraamColorYamki && onChangeVisraamColorYamki(defaultColors.visraamColorYamki);
+        refs.visraamColorYamkiInput.value = defaultColors.visraamColorYamki;
+        onChangeBackgroundColor(defaultColors.backgroundColor);
+        onChangeTextColor(defaultColors.textColor);
+        onChangeVisraamColor(defaultColors.visraamColor);
+        onChangeVisraamColorYamki(defaultColors.visraamColorYamki);
     }
     function saveColors() {
         config.backgroundColor = refs.backgroundColorInput.value;
@@ -44,11 +72,11 @@ export default function Help(options, children) {
         config.visraamColorYamki = refs.visraamColorYamkiInput.value;
     }
     function toggleVisraam() {
-        onToggleVisraam && onToggleVisraam(refs.visraamCheckbox.checked);
+        onToggleVisraam(refs.visraamCheckbox.checked);
     }
     function onClickGotoPage() {
         const page = parseInt(refs.gotoPageInput.value, 10);
-        onGotoPage && onGotoPage(page);
+        onGotoPage(page);
         refs.gotoPageInput.value = '';
     }
     const element = div({ ...elementOptions, class: 'help', onInput }, [
@@ -66,44 +94,56 @@ export default function Help(options, children) {
                 td([kbd('+'), ' / ', kbd('-')]),
             ]),
         ]),
-        div({ class: 'row' }, [
-            div({ class: 'column colorControls' }, [
-                label([
-                    input({
-                        ref: refs.textColorInput,
-                        type: 'color',
-                        value: config.textColor,
-                    }),
-                    ' Text color',
-                ]),
-                label([
-                    input({
-                        ref: refs.backgroundColorInput,
-                        type: 'color',
-                        value: config.backgroundColor,
-                    }),
-                    ' Background color',
-                ]),
-                label([
-                    input({
-                        ref: refs.visraamColorInput,
-                        type: 'color',
-                        value: config.visraamColor,
-                    }),
-                    ' Visraam color',
-                ]),
-                label([
-                    input({
-                        ref: refs.visraamColorYamkiInput,
-                        type: 'color',
-                        value: config.visraamColorYamki,
-                    }),
-                    ' Visraam secondary color',
-                ]),
+        div({ class: 'column' }, [
+            div({ class: 'row' }, [
+                'Dark',
+                input({
+                    ref: refs.darknessRangeInput,
+                    type: 'range',
+                    class: 'darknessRangeInput',
+                    ...rangeOptions,
+                }),
+                'Light',
             ]),
-            div({ class: 'column colorButtons' }, [
-                button({ ref: refs.resetButton, class: 'buttonSecondary', onClick: resetColors }, 'Reset'),
-                button({ ref: refs.saveColorsButton, onClick: saveColors }, 'Save'),
+            div({ class: 'row' }, [
+                div({ class: 'column colorControls' }, [
+                    label([
+                        input({
+                            ref: refs.textColorInput,
+                            type: 'color',
+                            value: config.textColor,
+                        }),
+                        ' Text color',
+                    ]),
+                    label([
+                        input({
+                            ref: refs.backgroundColorInput,
+                            type: 'color',
+                            value: config.backgroundColor,
+                        }),
+                        ' Background color',
+                    ]),
+                    label([
+                        input({
+                            ref: refs.visraamColorInput,
+                            type: 'color',
+                            value: config.visraamColor,
+                        }),
+                        ' Visraam color',
+                    ]),
+                    label([
+                        input({
+                            ref: refs.visraamColorYamkiInput,
+                            type: 'color',
+                            value: config.visraamColorYamki,
+                        }),
+                        ' Visraam secondary color',
+                    ]),
+                ]),
+                div({ class: 'column colorButtons' }, [
+                    button({ ref: refs.resetButton, class: 'buttonSecondary', onClick: resetColors }, 'Reset'),
+                    button({ ref: refs.saveColorsButton, onClick: saveColors }, 'Save'),
+                ]),
             ]),
         ]),
         hr(),

@@ -19,7 +19,7 @@ export default function createConfig(options) {
     ['D', 'G'].forEach(function (source) {
         Object.assign(config[source], {
             currentPage: 1,
-            displayedPage: 0,
+            activeRenderedPage: 0,
             lineCache: createArrayProxy([]),
             renderedPages: createArrayProxy([]),
         });
@@ -62,7 +62,10 @@ export default function createConfig(options) {
                 return config[target.source][property];
             }
         },
-        set(target, property, value) {
+        set(target, property, value, receiver) {
+            if (value === receiver[property]) {
+                return true;
+            }
             if (Array.isArray(value)) {
                 value = createArrayProxy(value);
             }

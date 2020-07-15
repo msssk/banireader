@@ -18,6 +18,7 @@ export default function App() {
             setFontSize(config.fontSize);
         }
         sourceSelection.hidden = true;
+        toggleCursor(false);
         reader.hidden = false;
         reader.render();
     }

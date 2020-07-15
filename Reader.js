@@ -1,4 +1,10 @@
+import { isContinuousShabad } from './bani.js';
 import { createRef, render, main, section, } from './tizi.js';
+const TOTAL_PAGES = {
+    G: 1430,
+    D: 1428,
+};
+const INVALID_SHABAD_ID = -1;
 const MAX_RENDERED_PAGES = 3;
 const nextKeys = new Set([
     'ArrowDown',
@@ -11,6 +17,15 @@ const previousKeys = new Set([
     'ArrowUp',
     'PageUp',
 ]);
+function withWordBreak(sum, line, index, array) {
+    if (index === array.length - 1 || line.text.endsWith('>')) {
+        sum += `${line.text}`;
+    }
+    else {
+        sum += `${line.text}<wbr> `;
+    }
+    return sum;
+}
 export default function Reader(options, children) {
     const { config, ref, ...elementOptions } = options;
     const refs = {
@@ -51,17 +66,20 @@ export default function Reader(options, children) {
         if (isNavigating) {
             return;
         }
+        if (!pageNodes[config.activeRenderedPage + 1].innerHTML) {
+            return;
+        }
         isNavigating = true;
-        const previousPageNode = pageNodes[config.displayedPage];
-        if (config.displayedPage === 0) {
-            config.displayedPage = 1;
+        const previousPageNode = pageNodes[config.activeRenderedPage];
+        if (config.activeRenderedPage === 0) {
+            config.activeRenderedPage = 1;
         }
         else {
             pageNodes.push(pageNodes.shift());
             config.renderedPages.push(config.renderedPages.shift());
             config.renderedPages[2] = '';
         }
-        const currentPageNode = pageNodes[config.displayedPage];
+        const currentPageNode = pageNodes[config.activeRenderedPage];
         previousPageNode.classList.remove('currentPage');
         currentPageNode.classList.add('currentPage');
         element.removeChild(previousPageNode);
@@ -70,22 +88,22 @@ export default function Reader(options, children) {
         isNavigating = false;
     }
     function gotoPreviousPage() {
-        if (isNavigating || config.displayedPage === 0) {
+        if (isNavigating || config.activeRenderedPage === 0) {
             return;
         }
-        const currentPageNode = pageNodes[1];
+        const currentPageNode = pageNodes[config.activeRenderedPage];
         currentPageNode.classList.remove('currentPage');
         element.removeChild(currentPageNode);
         const previousPageNode = pageNodes[0];
         previousPageNode.classList.add('currentPage');
         element.appendChild(previousPageNode);
-        config.displayedPage = 0;
+        config.activeRenderedPage = 0;
     }
     async function renderPage(pageIndex) {
         let pageHtml = config.renderedPages[pageIndex];
         if (!pageHtml) {
             const lines = await getNextPageLines();
-            pageHtml = lines.join('<wbr> ');
+            pageHtml = lines.reduce(withWordBreak, '');
             config.renderedPages[pageIndex] = pageHtml;
         }
         pageNodes[pageIndex].innerHTML = pageHtml;
@@ -97,15 +115,18 @@ export default function Reader(options, children) {
     }
     async function getNextPageLines() {
         const lines = [];
-        while (refs.sizingNode.offsetHeight <= element.offsetHeight) {
-            let line = await getNextLine();
-            if (lines.length === 0 && line.startsWith('<br>')) {
-                line = line.substr(4);
+        let line;
+        do {
+            line = await getNextLine();
+            if (line) {
+                lines.push(line);
+                refs.sizingNode.innerHTML += `${line.text}<wbr> `;
             }
-            lines.push(line);
-            refs.sizingNode.innerHTML += ` ${line}<wbr>`;
-        }
+        } while (line && refs.sizingNode.offsetHeight <= element.offsetHeight);
         if (refs.sizingNode.offsetHeight > element.offsetHeight) {
+            config.lineCache.unshift(lines.pop());
+        }
+        if (lines.length > 1 && lines.last.shabadId !== lines[lines.length - 2].shabadId) {
             config.lineCache.unshift(lines.pop());
         }
         if (refs.sizingNode.offsetWidth > element.offsetWidth) {
@@ -115,28 +136,41 @@ export default function Reader(options, children) {
         refs.sizingNode.innerHTML = '';
         return lines;
     }
+    const IkOngkar = '<>';
     function parseApiLine(apiLine) {
         let line = apiLine.verse.gurmukhi;
+        const isHeadingLine = line.startsWith(IkOngkar);
         const visraamMap = apiLine.visraam.sttm.reduce((sum, { p, t }) => {
             sum[p] = t;
             return sum;
-        }, {});
-        line = line.split(' ').map((word, index) => {
-            if (visraamMap[index] === 'v') {
-                return `<span class="visraam-main">${word}</span><wbr>`;
-            }
-            else if (visraamMap[index] === 'y') {
-                return `<span class="visraam-yamki">${word}</span>`;
-            }
-            else {
-                return word;
-            }
-        }).join(' ');
-        if (apiLine.shabadId !== config.currentShabadId) {
-            config.currentShabadId = apiLine.shabadId;
-            line = `<br><center>${line}</center>`;
+        }, Object.create(null));
+        if (Object.keys(visraamMap).length) {
+            line = line.split(' ').map((word, index) => {
+                if (visraamMap[index] === 'v') {
+                    return `<span class="visraam-main">${word}</span><wbr>`;
+                }
+                else if (visraamMap[index] === 'y') {
+                    return `<span class="visraam-yamki">${word}</span>`;
+                }
+                else {
+                    return word;
+                }
+            }).join(' ');
         }
-        return line;
+        if (isHeadingLine || (apiLine.shabadId !== config.currentShabadId &&
+            !isContinuousShabad(config.currentShabadId, apiLine.shabadId, config.source))) {
+            line = `<center>${line}</center>`;
+        }
+        if (config.currentShabadId !== apiLine.shabadId) {
+            config.currentShabadId = apiLine.shabadId;
+        }
+        return {
+            text: line,
+            lineNo: apiLine.lineNo,
+            pageNo: apiLine.pageNo,
+            shabadId: apiLine.shabadId,
+            verseId: apiLine.verseId,
+        };
     }
     async function getNextLine() {
         if (!config.lineCache.length) {
@@ -146,23 +180,28 @@ export default function Reader(options, children) {
         return config.lineCache.shift();
     }
     async function getNextPage() {
+        if (config.currentPage > TOTAL_PAGES[config.source]) {
+            return Promise.resolve({ page: [] });
+        }
         const apiResponse = await fetch(`https://api.banidb.com/v2/angs/${config.currentPage}/${config.source}`);
         config.currentPage += 1;
         return apiResponse.json();
     }
     async function renderCurrentPage() {
-        const currentPageNode = pageNodes[config.displayedPage];
+        pageNodes.forEach(node => node.classList.remove('currentPage'));
+        const currentPageNode = pageNodes[config.activeRenderedPage];
         currentPageNode.classList.add('currentPage');
         element.appendChild(currentPageNode);
-        for (let i = config.displayedPage; i < MAX_RENDERED_PAGES; i++) {
+        for (let i = config.activeRenderedPage; i < MAX_RENDERED_PAGES; i++) {
             await renderPage(i);
         }
     }
     async function gotoPage(pageNumber) {
-        config.displayedPage = 0;
+        config.activeRenderedPage = 0;
         config.lineCache = [];
         config.renderedPages = [];
         config.currentPage = pageNumber;
+        config.currentShabadId = INVALID_SHABAD_ID;
         renderCurrentPage();
     }
     function onKeyUp(event) {
