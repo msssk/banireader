@@ -20,6 +20,19 @@ export function lchToHex (l: number, c: number, h: number) {
 	}, '');
 }
 
+export function hexToLch (hexColorString: string) {
+	const red = parseInt(hexColorString.slice(1, 3), 16);
+	const green = parseInt(hexColorString.slice(3, 5), 16);
+	const blue = parseInt(hexColorString.slice(5, 7), 16);
+	const lch = sRGB_to_LCH([ red / 255, green / 255, blue / 255 ]);
+
+	return {
+		lightness: lch[0],
+		chroma: lch[1],
+		hue: lch[2],
+	};
+}
+
 export function cssColorToLch (cssColorString: string) {
 	if (!cssColorString) {
 		return;
