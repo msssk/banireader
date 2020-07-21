@@ -256,6 +256,7 @@ function factory<K extends keyof HTMLElementTagNameMap> (tagName: K): ElementRen
 	};
 }
 
+export const a = factory('a');
 export const br = factory('br');
 export const button = factory('button');
 export const div = factory('div');

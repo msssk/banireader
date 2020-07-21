@@ -170,11 +170,17 @@ body {
 	cursor: none;
 }
 
-.reader.unsupported {
+.reader .unsupported {
+	background-color: hsl(0, 34%, 14%);
+	border: 5px solid hsl(0, 65%, 34%);
+	border-radius: 15px;
 	cursor: auto;
 	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-	padding-top: 4em;
-	padding-left: 5em;
+	position: absolute;
+	top: 5em;
+	left: 5em;
+	padding: 1em;
+	z-index: 100;
 }
 
 /* .page must have no dimensions set so that it can grow/shrink according to content

@@ -5,7 +5,10 @@ import {
 	ComponentOptions,
 	Controller,
 	RenderChildren,
+	a,
+	br,
 	createRef,
+	div,
 	render,
 	main,
 	section,
@@ -170,18 +173,28 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 		let pageHtml = config.renderedPages[pageIndex];
 		if (!pageHtml) {
 			const lines = await getNextPageLines();
-			pageHtml = lines.reduce<string>(withWordBreak, '');
-			config.renderedPages[pageIndex] = pageHtml;
+			if (lines.length) {
+				pageHtml = lines.reduce<string>(withWordBreak, '');
+				config.renderedPages[pageIndex] = pageHtml;
+			}
 		}
-		pageNodes[pageIndex].innerHTML = pageHtml;
+		if (pageHtml) {
+			pageNodes[pageIndex].innerHTML = pageHtml;
+		}
 	}
 
 	function reportUnsupportedBrowser () {
-		element.classList.add('unsupported');
-		element.innerHTML = `This browser does not have the necessary text rendering support.<br>Please try
-			<a href="https://www.google.com/chrome/">Google Chrome</a>`;
+		if (!/Chrome/.test(navigator.userAgent)) {
+			element.appendChild(div({ class: 'unsupported' }, [
+				'This browser does not have the necessary text rendering support.',
+				br(),
+				'Please try ',
+				a({ href: 'https://www.google.com/chrome/' }, 'Google Chrome'),
+			]));
+		}
 	}
 
+	let isFirstRender = true;
 	async function getNextPageLines () {
 		const lines = [];
 		let line;
@@ -192,6 +205,14 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 			if (line) {
 				lines.push(line);
 				refs.sizingNode.innerHTML += `${line.text}<wbr> `;
+			}
+
+			// If the first render fails to fit it's probably because the browser is not correctly breaking on <wbr>
+			// If later renders fail it's... some unknown glitch?
+			if (isFirstRender && refs.sizingNode.offsetWidth > element.offsetWidth) {
+				reportUnsupportedBrowser();
+
+				return [];
 			}
 		} while (line && refs.sizingNode.offsetHeight <= element.offsetHeight);
 
@@ -205,12 +226,7 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 			config.lineCache.unshift(lines.pop());
 		}
 
-		if (refs.sizingNode.offsetWidth > element.offsetWidth) {
-			reportUnsupportedBrowser();
-
-			return [];
-		}
-
+		isFirstRender = false;
 		refs.sizingNode.innerHTML = '';
 
 		return lines;
