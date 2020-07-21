@@ -1,5 +1,5 @@
 import { isContinuousShabad } from './bani.js';
-import { createRef, render, main, section, } from './tizi.js';
+import { a, br, createRef, div, render, main, section, } from './tizi.js';
 const TOTAL_PAGES = {
     G: 1430,
     D: 1428,
@@ -103,16 +103,26 @@ export default function Reader(options, children) {
         let pageHtml = config.renderedPages[pageIndex];
         if (!pageHtml) {
             const lines = await getNextPageLines();
-            pageHtml = lines.reduce(withWordBreak, '');
-            config.renderedPages[pageIndex] = pageHtml;
+            if (lines.length) {
+                pageHtml = lines.reduce(withWordBreak, '');
+                config.renderedPages[pageIndex] = pageHtml;
+            }
         }
-        pageNodes[pageIndex].innerHTML = pageHtml;
+        if (pageHtml) {
+            pageNodes[pageIndex].innerHTML = pageHtml;
+        }
     }
     function reportUnsupportedBrowser() {
-        element.classList.add('unsupported');
-        element.innerHTML = `This browser does not have the necessary text rendering support.<br>Please try
-			<a href="https://www.google.com/chrome/">Google Chrome</a>`;
+        if (!/Chrome/.test(navigator.userAgent)) {
+            element.appendChild(div({ class: 'unsupported' }, [
+                'This browser does not have the necessary text rendering support.',
+                br(),
+                'Please try ',
+                a({ href: 'https://www.google.com/chrome/' }, 'Google Chrome'),
+            ]));
+        }
     }
+    let isFirstRender = true;
     async function getNextPageLines() {
         const lines = [];
         let line;
@@ -122,6 +132,10 @@ export default function Reader(options, children) {
                 lines.push(line);
                 refs.sizingNode.innerHTML += `${line.text}<wbr> `;
             }
+            if (isFirstRender && refs.sizingNode.offsetWidth > element.offsetWidth) {
+                reportUnsupportedBrowser();
+                return [];
+            }
         } while (line && refs.sizingNode.offsetHeight <= element.offsetHeight);
         if (refs.sizingNode.offsetHeight > element.offsetHeight) {
             config.lineCache.unshift(lines.pop());
@@ -129,10 +143,7 @@ export default function Reader(options, children) {
         if (lines.length > 1 && lines.last.shabadId !== lines[lines.length - 2].shabadId) {
             config.lineCache.unshift(lines.pop());
         }
-        if (refs.sizingNode.offsetWidth > element.offsetWidth) {
-            reportUnsupportedBrowser();
-            return [];
-        }
+        isFirstRender = false;
         refs.sizingNode.innerHTML = '';
         return lines;
     }
