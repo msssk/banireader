@@ -13,27 +13,36 @@
 
 /* eslint-disable max-len */
 
+const emptyObject = Object.freeze(Object.create(null));
+
 export type Renderable = string | Node;
 export type RenderChildren = Renderable | Renderable[];
 
 /**
- * A function that returns either a `Node` or a `Controller`.
- * Should call `render(element, options, children)` to handle `options.ref` and `children`
+ * A function that returns an `HTMLElement`.
+ * Should call `render(element, options, children)` to handle `options.controller`, `options.ref` and `children`
  */
 export interface Component {
-	<E extends Node, C extends Controller>(options?: ComponentOptions<E, C>, children?: RenderChildren): E | C
+	<E extends HTMLElement, C extends Controller<E>>(options?: ComponentOptions<E, C>, children?: RenderChildren): E
 }
 
-export type ComponentOptions<E extends Node, C extends Controller = Controller> = {
+export type ComponentOptions<E extends HTMLElement, C extends Controller<E> = Controller<E>> = {
 	[key: string]: unknown;
-	ref?: Ref<E> | ComponentRef<E, C>;
+	controller?: C;
+	ref?: Ref<E> | ComponentRef<C>;
 };
 
 /**
  * An object that exposes methods to manipulate a Component.
  */
-export interface Controller {
+export interface Controller<E extends HTMLElement = HTMLElement> {
+	/**
+	 * A function that can be manually invoked to destroy the DOM element and perform any cleanup.
+	 * Cleanup (e.g. removing event listeners) should be performed in implementations of this method.
+	 */
 	destroy?(): void;
+
+	element?: E;
 }
 
 // These should generally not be used externally, but if you want to go ahead
@@ -41,22 +50,34 @@ export const RefElementSymbol = Symbol('RefElementSymbol');
 export const RefControllerSymbol = Symbol('RefControllerSymbol');
 
 /**
- * An object that stores a Node in `RefElementSymbol` and proxies the Node's properties. The node is also
- * accessible on the `node` property (e.g. for direct equality comparisons). For the sake of convenience most
- * node properties can be accessed through the proxy. The proxy will bind functions to the node so they are executed
- * in the correct context.
+ * An object that stores an element in `RefElementSymbol` and proxies the element's properties. The element is also
+ * accessible on the `element` property (e.g. for direct equality comparisons). For the sake of convenience most
+ * element properties can be accessed through the proxy. The proxy will bind functions to the element so they are
+ * executed in the correct context.
  */
-export type Ref<E extends Node = Node> = {
+export type Ref<E extends HTMLElement = HTMLElement> = {
 	[RefElementSymbol]: E;
-	node: E;
+	clone(ref: Ref<E>): void;
+	element: E;
 };
 
-export function createRef<T extends Node> (): T & Ref<T> {
-	const ref = Object.create(null);
+const RefPrototype = Object.create(null, {
+	clone: {
+		configurable: false,
+		enumerable: true,
+		writable: false,
+		value: function (ref: Ref) {
+			this[RefElementSymbol] = ref[RefElementSymbol];
+		},
+	},
+});
+
+export function createRef<T extends HTMLElement> (): T & Ref<T> {
+	const ref = Object.create(RefPrototype);
 
 	return new Proxy(ref, {
 		get (target, key) {
-			if (key === RefElementSymbol || key === 'node') {
+			if (key === RefElementSymbol || key === 'element') {
 				return target[RefElementSymbol];
 			}
 			else {
@@ -72,7 +93,7 @@ export function createRef<T extends Node> (): T & Ref<T> {
 		},
 
 		set (target, key, value) {
-			if (key === 'node') {
+			if (key === 'element') {
 				return false;
 			}
 
@@ -89,29 +110,47 @@ export function createRef<T extends Node> (): T & Ref<T> {
 }
 
 /**
- * An object that stores a Node in `RefElementSymbol` and a Controller in `RefControllerSymbol`
+ * An object that stores an element in `RefElementSymbol` and a Controller in `RefControllerSymbol`
  * and proxies the Controller's properties
  */
-export type ComponentRef<E extends Node, C extends Controller> = {
+export interface ComponentRef<C extends Controller<HTMLElement>> extends Ref {
 	[RefControllerSymbol]: C;
-	[RefElementSymbol]: E;
-	control(element: E, controller?: C): void;
-	element: E;
-};
+	clone(ref: ComponentRef<C>): void;
+	control(element: Controller['element'], controller?: C): void;
+}
 
 const ComponentRefPrototype = Object.create(null, {
+	clone: {
+		configurable: false,
+		enumerable: true,
+		writable: false,
+		value: function<E extends HTMLElement> (ref: ComponentRef<Controller<E>>) {
+			RefPrototype.clone(ref);
+			this[RefControllerSymbol] = ref[RefControllerSymbol];
+		},
+	},
+
 	control: {
 		configurable: false,
 		enumerable: true,
 		writable: false,
-		value: function control (element: unknown, controller?: unknown) {
+		value: function control<E extends HTMLElement = HTMLElement, C extends Controller<E> = Controller<E>> (element: E, controller?: C) {
+			if (controller) {
+				Object.defineProperty(controller, 'element', {
+					configurable: false,
+					enumerable: true,
+					writable: false,
+					value: element,
+				});
+			}
+
 			this[RefElementSymbol] = element;
-			this[RefControllerSymbol] = controller || Object.create(null);
+			this[RefControllerSymbol] = controller || emptyObject;
 		},
 	},
 });
 
-export function createComponentRef<E extends Node, C extends Controller = Controller> (): C & ComponentRef<E, C> {
+export function createComponentRef<C extends Controller<HTMLElement> = Controller<HTMLElement>> (): C & ComponentRef<C> {
 	const ref = Object.create(ComponentRefPrototype);
 
 	return new Proxy(ref, {
@@ -119,7 +158,7 @@ export function createComponentRef<E extends Node, C extends Controller = Contro
 			if (property === 'element') {
 				return target[RefElementSymbol];
 			}
-			else if (property === 'control') {
+			else if (property === 'clone' || property === 'control') {
 				return target[property];
 			}
 			else {
@@ -128,7 +167,7 @@ export function createComponentRef<E extends Node, C extends Controller = Contro
 		},
 
 		set (target, property: keyof C, value: unknown) {
-			if (property === 'control' || property === 'element') {
+			if (property === 'clone' || property === 'control' || property === 'element') {
 				return false;
 			}
 
@@ -146,13 +185,13 @@ export function createComponentRef<E extends Node, C extends Controller = Contro
 
 export type ElementOptions = {
 	[key: string]: unknown;
-	ref?: Ref;
+	controller?: Controller;
+	ref?: Ref | ComponentRef<Controller>;
 };
 
-const emptyObject = Object.freeze(Object.create(null));
 const eventHandlerRegex = /^on[A-Z][a-zA-Z]+$/;
 
-function applyOptions (node: Node, options: ElementOptions) {
+function applyOptions<E extends HTMLElement> (element: E, options: ElementOptions) {
 	Object.keys(options).forEach(function (key) {
 		const value = options[key];
 
@@ -161,13 +200,13 @@ function applyOptions (node: Node, options: ElementOptions) {
 				value :
 				[ value ]) as [EventListener, EventListenerOptions?];
 			const eventName = key.slice(2).toLowerCase();
-			node.addEventListener(eventName, eventListener, eventListenerOptions);
+			element.addEventListener(eventName, eventListener, eventListenerOptions);
 		}
-		else if ((node as HTMLElement).setAttribute && typeof value === 'string') {
-			(node as HTMLElement).setAttribute(key, value as string);
+		else if (element.setAttribute && typeof value === 'string') {
+			element.setAttribute(key, value as string);
 		}
 		else {
-			(node as any)[key] = value;
+			(element as any)[key] = value;
 		}
 	});
 }
@@ -188,7 +227,7 @@ function isChild (child: unknown): child is Renderable {
  */
 export function render<C extends Controller = Controller> (
 	element: Node,
-	options?: ElementOptions | ComponentOptions<Node> | RenderChildren,
+	options?: ElementOptions | ComponentOptions<HTMLElement> | RenderChildren,
 	children?: RenderChildren,
 	controller?: C
 ): typeof element extends string ? Text : typeof element extends Node ? typeof element : unknown {
@@ -204,18 +243,18 @@ export function render<C extends Controller = Controller> (
 	const {
 		ref,
 		...elementOptions
-	} = options as ComponentOptions<Node>;
+	} = options as ComponentOptions<HTMLElement>;
 
-	if (elementOptions) {
-		applyOptions(element, elementOptions);
+	if (elementOptions && element.nodeType === element.ELEMENT_NODE) {
+		applyOptions(element as HTMLElement, elementOptions);
 	}
 
-	if (ref) {
+	if (ref && element.nodeType === element.ELEMENT_NODE) {
 		if ('control' in ref) {
-			ref.control(element, controller);
+			ref.control(element as HTMLElement, controller);
 		}
 		else {
-			ref[RefElementSymbol] = element;
+			ref[RefElementSymbol] = element as HTMLElement;
 		}
 	}
 
@@ -225,6 +264,10 @@ export function render<C extends Controller = Controller> (
 		}
 
 		children.forEach(function (child) {
+			if (!child) {
+				return;
+			}
+
 			if (typeof child === 'string') {
 				child = document.createTextNode(child);
 			}
@@ -241,21 +284,43 @@ interface ElementRenderer<K extends keyof HTMLElementTagNameMap> {
 	(options?: ElementOptions, children?: Renderable | Renderable[]): HTMLElementTagNameMap[K];
 }
 
+export default function tizi<K extends keyof HTMLElementTagNameMap> (tagName: K | Component, options?: ElementOptions, ...children: Renderable[]) {
+	const {
+		controller,
+		...elementOptions
+	} = (options || emptyObject) as ElementOptions;
+	let element;
+
+	if (typeof tagName === 'string') {
+		element = document.createElement(tagName);
+		render(element, elementOptions, children, controller as unknown as Controller<HTMLElement>);
+	}
+	else {
+		element = tagName(options, children);
+	}
+
+	return element;
+}
+
 function factory<K extends keyof HTMLElementTagNameMap> (tagName: K): ElementRenderer<K> {
-	return function (options?: Renderable | Renderable[] | ElementOptions, children?: Renderable | Renderable[]): HTMLElementTagNameMap[K] {
+	return function (options?: RenderChildren | ElementOptions, children?: RenderChildren): HTMLElementTagNameMap[K] {
 		if (Object.prototype.toString.apply(options) !== '[object Object]') {
-			children = options as Renderable | Renderable[];
+			children = options as RenderChildren;
 			options = emptyObject;
 		}
 
-		const element = document.createElement(tagName);
+		if (!Array.isArray(children)) {
+			children = [ children ] as Renderable[];
+		}
 
-		render(element, options, children);
-
-		return element;
+		// TODO: wat?
+		/* eslint-disable @typescript-eslint/ban-ts-comment */
+		// @ts-expect-error
+		return tizi(tagName, options as ElementOptions, ...children);
 	};
 }
 
+// TODO: all the elements
 export const a = factory('a');
 export const br = factory('br');
 export const button = factory('button');
@@ -271,20 +336,3 @@ export const span = factory('span');
 export const table = factory('table');
 export const td = factory('td');
 export const tr = factory('tr');
-
-export default {
-	br,
-	button,
-	div,
-	hr,
-	input,
-	kbd,
-	label,
-	main,
-	p,
-	section,
-	span,
-	table,
-	td,
-	tr,
-};

@@ -14,7 +14,9 @@ module.exports = {
 	},
 	plugins: [
 		'@typescript-eslint',
+		'local',
 	],
+	ignorePatterns: [ 'src/*.js' ],
 	rules: {
 		// Possible Errors
 		'no-await-in-loop': 'error',
@@ -97,35 +99,35 @@ module.exports = {
 			CallExpression: { arguments: 1 },
 			FunctionDeclaration: {
 				body: 1,
-				parameters: 1
+				parameters: 1,
 			},
 			FunctionExpression: {
 				body: 1,
-				parameters: 1
+				parameters: 1,
 			},
 			MemberExpression: 1,
 			ObjectExpression: 1,
 			outerIIFEBody: 1,
-			SwitchCase: 1
+			SwitchCase: 1,
 		} ],
 		'key-spacing': [ 'error', {
 			afterColon: true,
 			beforeColon: false,
-			mode: 'strict'
+			mode: 'strict',
 		} ],
 		'keyword-spacing': [ 'error', {
 			after: true,
-			before: true
+			before: true,
 		} ],
 		'linebreak-style': [ 'error', 'unix' ],
 		'max-depth': [ 'warn', 5 ],
 		'max-len': [ 'warn', 120, {
-			ignoreUrls: true
+			ignoreUrls: true,
 		} ],
 		'max-lines': [ 'warn', {
 			max: 500,
 			skipBlankLines: true,
-			skipComments: true
+			skipComments: true,
 		} ],
 		'max-nested-callbacks': [ 'error', 6 ],
 		'max-params': [ 'warn', 5 ],
@@ -133,7 +135,7 @@ module.exports = {
 		'new-cap': [ 'off', {
 			capIsNew: true,
 			newIsCap: false,
-			properties: true
+			properties: true,
 		} ],
 		'new-parens': 'error',
 		'newline-before-return': 'error',
@@ -146,7 +148,7 @@ module.exports = {
 		'no-multi-assign': 'error',
 		'no-multiple-empty-lines': [ 'error', {
 			max: 1,
-			maxBOF: 0
+			maxBOF: 0,
 		} ],
 		'no-negated-condition': 'error',
 		'no-nested-ternary': 'error',
@@ -179,25 +181,25 @@ module.exports = {
 		'quote-props': [ 'error', 'as-needed' ],
 		quotes: [ 'error', 'single', {
 			allowTemplateLiterals: true,
-			avoidEscape: true
+			avoidEscape: true,
 		} ],
 		semi: [ 'error', 'always' ],
 		'semi-spacing': [ 'error', {
 			after: true,
-			before: false
+			before: false,
 		} ],
 		'sort-vars': [ 'warn', { ignoreCase: true } ],
 		'space-before-blocks': 'error',
 		'space-before-function-paren': [ 'error', {
 			anonymous: 'always',
 			asyncArrow: 'always',
-			named: 'always'
+			named: 'always',
 		} ],
 		'space-in-parens': [ 'error', 'never' ],
 		'space-infix-ops': [ 'error' ],
 		'space-unary-ops': [ 'error', {
 			nonwords: false,
-			words: true
+			words: true,
 		} ],
 		'spaced-comment': [ 'error', 'always' ],
 
@@ -207,7 +209,17 @@ module.exports = {
 		'no-use-before-define': [ 'error', {
 			classes: true,
 			functions: false,
-			variables: true
-		} ]
-	}
+			variables: true,
+		} ],
+	},
+
+	overrides: [
+		{
+			files: [ '**/*.tsx' ],
+			rules: {
+				'local/jsx-uses-my-pragma': 'error',
+				'local/jsx-uses-vars': 'error',
+			},
+		},
+	],
 };

@@ -1,10 +1,13 @@
 {
 	"compilerOptions": {
+		"baseUrl": "./src",
+		"jsx": "react",
+		"jsxFactory": "tizi",
 		"module": "ESNext",
 		"newLine": "LF",
 		"noImplicitAny": true,
 		"removeComments": true,
-		"target": "ES2019"
+		"target": "ESNext"
 	},
 	"include": [
 		"src/**/*.ts"

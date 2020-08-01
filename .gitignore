@@ -1,4 +1,5 @@
 .vscode
+build/*
 node_modules
 src/**/*.js
 .DS_Store

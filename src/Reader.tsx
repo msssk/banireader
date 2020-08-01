@@ -1,17 +1,10 @@
 import { ApiPageInfo, ApiPageLine, BaniLine } from './interfaces.d';
 import { isContinuousShabad } from './bani.js';
 import { Config } from './Config.js';
-import {
+import tizi, {
 	ComponentOptions,
 	Controller,
-	RenderChildren,
-	a,
-	br,
 	createRef,
-	div,
-	render,
-	main,
-	section,
 } from './tizi.js';
 
 const TOTAL_PAGES = {
@@ -45,7 +38,7 @@ function withWordBreak (sum: string, line: BaniLine, index: number, array: BaniL
 	return sum;
 }
 
-export interface ReaderController extends Controller {
+export interface ReaderController extends Controller<HTMLElement> {
 	gotoPage (page: number): void;
 	hidden: boolean;
 	render (): Promise<void>;
@@ -53,34 +46,19 @@ export interface ReaderController extends Controller {
 }
 
 export interface ReaderOptions extends ComponentOptions<HTMLElement, ReaderController> {
-	config: Config
+	config: Config;
 }
 
-export default function Reader (options: ReaderOptions, children?: RenderChildren) {
+export default function Reader (options: ReaderOptions) {
 	const {
 		config,
-		ref,
 		...elementOptions
 	} = options;
 	const refs = {
-		main: createRef<HTMLElement>(),
 		sizingNode: createRef<HTMLElement>(),
 	};
 
-	const element = main({ ref: refs.main, class: 'reader', ...elementOptions }, [
-		section({ ref: refs.sizingNode, class: 'page' }),
-	]);
-
-	/**
-	 * The currently rendered pages. There are up to 3. `renderPage` will keep up to 2 pages ahead pre-rendered
-	 * for quick navigation. Navigation one page backwards can be done, but no more than 1.
-	 */
-	const pageNodes: HTMLElement[] = [];
-	for (let i = 0; i < MAX_RENDERED_PAGES; i++) {
-		pageNodes.push(refs.sizingNode.node.cloneNode() as HTMLElement);
-	}
-
-	render(element, options, children, {
+	const controller = {
 		destroy () {
 			document.body.removeEventListener('keyup', onKeyUp);
 		},
@@ -90,25 +68,38 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 		render: renderCurrentPage,
 
 		get hidden () {
-			return element.hidden;
+			return this.element.hidden;
 		},
 
 		set hidden (value: boolean) {
-			element.hidden = value;
+			this.element.hidden = value;
 
 			if (value === false) {
-				element.classList.toggle('visraam', Boolean(config.showVisraam));
+				this.element.classList.toggle('visraam', Boolean(config.showVisraam));
 			}
 		},
 
 		get showVisraam () {
-			return element.classList.contains('visraam');
+			return this.element.classList.contains('visraam');
 		},
 
 		set showVisraam (value: boolean) {
-			element.classList.toggle('visraam', value);
+			this.element.classList.toggle('visraam', value);
 		},
-	});
+	};
+
+	const element = <main {...elementOptions} controller={controller} class="reader">
+		<section ref={refs.sizingNode} class="page" />
+	</main>;
+
+	/**
+	 * The currently rendered pages. There are up to MAX_RENDERED_PAGES. `renderPage` will keep up to 2 pages ahead
+	 * pre-rendered for quick navigation. Navigation one page backwards can be done, but no more than 1.
+	 */
+	const pageNodes: HTMLElement[] = [];
+	for (let i = 0; i < MAX_RENDERED_PAGES; i++) {
+		pageNodes.push(refs.sizingNode.element.cloneNode() as HTMLElement);
+	}
 
 	// Guard to prevent further navigation while navigation is in progress
 	let isNavigating = false;
@@ -185,12 +176,11 @@ export default function Reader (options: ReaderOptions, children?: RenderChildre
 
 	function reportUnsupportedBrowser () {
 		if (!/Chrome/.test(navigator.userAgent)) {
-			element.appendChild(div({ class: 'unsupported' }, [
-				'This browser does not have the necessary text rendering support.',
-				br(),
-				'Please try ',
-				a({ href: 'https://www.google.com/chrome/' }, 'Google Chrome'),
-			]));
+			element.appendChild(<div class="unsupported">
+				This browser does not have the necessary text rendering support.
+				<br />
+				Please try <a href="https://www.google.com/chrome/">Google Chrome</a>
+			</div>);
 		}
 	}
 

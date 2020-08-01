@@ -1,27 +1,14 @@
 import { adjustLightness, getLightnessRange } from './util/color.js';
 import { Config, defaultColors } from './Config.js';
-import {
+import tizi, {
 	ComponentOptions,
 	Controller,
-	RenderChildren,
 	createRef,
-	render,
-	br,
-	button,
-	div,
-	hr,
-	input,
-	kbd,
-	label,
-	table,
-	td,
-	tr,
 } from './tizi.js';
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-function noop () {}
+function noop () { /* do nothing */ }
 
-export interface HelpController extends Controller {
+export interface HelpController extends Controller<HTMLDivElement> {
 	backgroundColor: string;
 	hidden: boolean;
 	hide(): void;
@@ -41,7 +28,7 @@ export interface HelpOptions extends ComponentOptions<HTMLDivElement, HelpContro
 	onToggleVisraam?(value: boolean): void;
 }
 
-export default function Help (options: HelpOptions, children?: RenderChildren) {
+export default function Help (options: HelpOptions) {
 	const {
 		config,
 		onChangeBackgroundColor = noop,
@@ -50,7 +37,6 @@ export default function Help (options: HelpOptions, children?: RenderChildren) {
 		onChangeVisraamColorYamki = noop,
 		onGotoPage = noop,
 		onToggleVisraam = noop,
-		ref, // TODOC: must always extract all component options from elementOptions
 		...elementOptions
 	} = options;
 
@@ -78,30 +64,29 @@ export default function Help (options: HelpOptions, children?: RenderChildren) {
 		config.visraamColor,
 		config.visraamColorYamki,
 	]);
-	const rangeOptions: any = {
+	const rangeOptions: Record<string, any> = {
 		min: 0,
 		max: lightnessRange.min + (100 - lightnessRange.max),
 		value: lightnessRange.min,
 	};
 	rangeOptions.step = rangeOptions.max / 100;
 
-	// eslint-disable-next-line complexity
 	function onInput (event: InputEvent) {
 		const target = event.target as HTMLInputElement;
 
-		if (target === refs.textColorInput.node) {
+		if (target === refs.textColorInput.element) {
 			onChangeTextColor(refs.textColorInput.value);
 		}
-		else if (target === refs.backgroundColorInput.node) {
+		else if (target === refs.backgroundColorInput.element) {
 			onChangeBackgroundColor(refs.backgroundColorInput.value);
 		}
-		else if (target === refs.visraamColorInput.node) {
+		else if (target === refs.visraamColorInput.element) {
 			onChangeVisraamColor(refs.visraamColorInput.value);
 		}
-		else if (target === refs.visraamColorYamkiInput.node) {
+		else if (target === refs.visraamColorYamkiInput.element) {
 			onChangeVisraamColorYamki(refs.visraamColorYamkiInput.value);
 		}
-		else if (target === refs.darknessRangeInput.node) {
+		else if (target === refs.darknessRangeInput.element) {
 			const lightnessDelta = refs.darknessRangeInput.valueAsNumber - lightnessRange.min;
 			onChangeBackgroundColor(adjustLightness(initialColors.backgroundColor, lightnessDelta));
 			onChangeTextColor(adjustLightness(initialColors.textColor, lightnessDelta));
@@ -139,108 +124,18 @@ export default function Help (options: HelpOptions, children?: RenderChildren) {
 		refs.gotoPageInput.value = '';
 	}
 
-	const element = div({ ...elementOptions, class: 'help', onInput }, [
-		table({ class: 'infoTable' }, [
-			tr([
-				td('Next page'),
-				td([ kbd('Space'), ' ', kbd('►'), ' ', kbd('▼'), ' ', kbd('Page Down') ]),
-			]),
-			tr([
-				td('Previous page'),
-				td([ kbd('◄'), ' ', kbd('▲'), ' ', kbd('Page Up') ]),
-			]),
-			tr([
-				td([ 'Increase/decrease', br(), 'font size' ]),
-				td([ kbd('+'), ' / ', kbd('-') ]),
-			]),
-		]),
-
-		div({ class: 'column' }, [
-			div({ class: 'row' }, [
-				'Dark',
-				input({
-					ref: refs.darknessRangeInput,
-					type: 'range',
-					class: 'darknessRangeInput',
-					...rangeOptions,
-				}),
-				'Light',
-			]),
-			div({ class: 'row' }, [
-				div({ class: 'column colorControls' }, [
-					label([
-						input({
-							ref: refs.textColorInput,
-							type: 'color',
-							value: config.textColor,
-						}),
-						' Text color',
-					]),
-					label([
-						input({
-							ref: refs.backgroundColorInput,
-							type: 'color',
-							value: config.backgroundColor,
-						}),
-						' Background color',
-					]),
-					label([
-						input({
-							ref: refs.visraamColorInput,
-							type: 'color',
-							value: config.visraamColor,
-						}),
-						' Visraam color',
-					]),
-					label([
-						input({
-							ref: refs.visraamColorYamkiInput,
-							type: 'color',
-							value: config.visraamColorYamki,
-						}),
-						' Visraam secondary color',
-					]),
-				]),
-
-				div({ class: 'column colorButtons' }, [
-					button({ ref: refs.resetButton, class: 'buttonSecondary', onClick: resetColors },
-						'Reset'
-					),
-					button({ ref: refs.saveColorsButton, onClick: saveColors },
-						'Save'
-					),
-				]),
-			]),
-		]),
-
-		hr(),
-
-		label([
-			input({ ref: refs.visraamCheckbox, type: 'checkbox', onClick: toggleVisraam }),
-			'Show visraam',
-		]),
-		div([
-			label([
-				'Go to page: ',
-				input({ ref: refs.gotoPageInput, type: 'number' }),
-			]),
-			' ',
-			button({ type: 'button', onClick: onClickGotoPage }, 'Go'),
-		]),
-	]);
-
-	render(element, options, children, {
+	const controller = {
 		destroy () {
-			element.removeEventListener('input', onInput);
-			element.remove();
+			this.element.removeEventListener('input', onInput);
+			this.element.remove();
 		},
 
 		get hidden () {
-			return element.hidden;
+			return this.element.hidden;
 		},
 
 		set hidden (value: boolean) {
-			element.hidden = value;
+			this.element.hidden = value;
 
 			if (value === false) {
 				refs.visraamCheckbox.checked = Boolean(config.showVisraam);
@@ -280,7 +175,73 @@ export default function Help (options: HelpOptions, children?: RenderChildren) {
 		set visraamColorYamki (value: string) {
 			refs.visraamColorYamkiInput.value = value;
 		},
-	});
+	};
 
-	return element;
+	return <div {...elementOptions} class="help" onInput={onInput} controller={controller}>
+		<table class="infoTable">
+			<tr>
+				<td>Next page</td>
+				<td><kbd>Space</kbd> <kbd>►</kbd> <kbd>▼</kbd> <kbd>Page Down</kbd></td>
+			</tr>
+
+			<tr>
+				<td>Previous page</td>
+				<td><kbd>◄</kbd> <kbd>▲</kbd> <kbd>Page Up</kbd></td>
+			</tr>
+
+			<tr>
+				<td>Increase/decrease<br />font size</td>
+				<td><kbd>+</kbd> / <kbd>-</kbd></td>
+			</tr>
+		</table>
+
+		<div class="column">
+			<div class="row">
+				Dark
+				<input ref={refs.darknessRangeInput} class="darknessRangeInput" type="range" {...rangeOptions} />
+				Light
+			</div>
+
+			<div class="row">
+				<div class="column colorControls">
+					<label>
+						<input ref={refs.textColorInput} type="color" value={config.textColor} />
+						Text color
+					</label>
+					<label>
+						<input ref={refs.backgroundColorInput} type="color" value={config.backgroundColor} />
+						Background color
+					</label>
+					<label>
+						<input ref={refs.visraamColorInput} type="color" value={config.visraamColor} />
+						Visraam color
+					</label>
+					<label>
+						<input ref={refs.visraamColorYamkiInput} type="color" value={config.visraamColorYamki} />
+						Visraam secondary color
+					</label>
+				</div>
+
+				<div class="column colorButtons">
+					<button ref={refs.resetButton} class="buttonSecondary" onClick={resetColors}>Reset</button>
+					<button ref={refs.saveColorsButton} onClick={saveColors}>Save</button>
+				</div>
+			</div>
+		</div>
+
+		<hr />
+
+		<label>
+			<input ref={refs.visraamCheckbox} type="checkbox" onClick={toggleVisraam} />
+			Show visraam
+		</label>
+
+		<div>
+			<label>
+				Go to page:
+				<input ref={refs.gotoPageInput} type="number" />
+				<button type="button" onClick={onClickGotoPage}>Go</button>
+			</label>
+		</div>
+	</div>;
 }

@@ -1,7 +1,7 @@
 import createConfig from './Config.js';
 import Help, { HelpController } from './Help.js';
 import Reader, { ReaderController } from './Reader.js';
-import { createComponentRef } from './tizi.js';
+import tizi, { createComponentRef } from './tizi.js';
 import SourceSelection, { SourceSelectionController } from './SourceSelection.js';
 
 export const enum CssCustomProps {
@@ -23,9 +23,9 @@ function getFontSize () {
 
 export default function App () {
 	const config = createConfig({ storageKey: 'banireader' });
-	const sourceSelection = createComponentRef<ReturnType<typeof SourceSelection>, SourceSelectionController>();
-	const help = createComponentRef<ReturnType<typeof Help>, HelpController>();
-	const reader = createComponentRef<ReturnType<typeof Reader>, ReaderController>();
+	const sourceSelection = createComponentRef<SourceSelectionController>();
+	const help = createComponentRef<HelpController>();
+	const reader = createComponentRef<ReaderController>();
 
 	function onSelectSource (source: string) {
 		config.source = source;
@@ -38,40 +38,33 @@ export default function App () {
 		reader.render();
 	}
 
-	document.body.appendChild(SourceSelection({ ref: sourceSelection, onSelectSource }));
+	document.body.appendChild(<SourceSelection ref={sourceSelection} onSelectSource={onSelectSource} />);
 
 	requestAnimationFrame(function () {
-		document.body.appendChild(Reader({
-			config,
-			hidden: true,
-			ref: reader,
-		}));
+		document.body.appendChild(<Reader ref={reader} config={config} hidden />);
 
-		document.body.appendChild(Help({
-			config,
-			hidden: true,
-			ref: help,
-			onChangeTextColor (value) {
+		document.body.appendChild(<Help ref={help} config={config} hidden
+			onChangeTextColor={function (value) {
 				document.documentElement.style.setProperty(CssCustomProps.TextColor, value);
-			},
-			onChangeBackgroundColor (value) {
+			}}
+			onChangeBackgroundColor={function (value) {
 				document.documentElement.style.setProperty(CssCustomProps.BackgroundColor, value);
-			},
-			onChangeVisraamColor (value) {
+			}}
+			onChangeVisraamColor={function (value) {
 				document.documentElement.style.setProperty(CssCustomProps.VisraamColorMain, value);
-			},
-			onChangeVisraamColorYamki (value) {
+			}}
+			onChangeVisraamColorYamki={function (value) {
 				document.documentElement.style.setProperty(CssCustomProps.VisraamColorYamki, value);
-			},
-			onGotoPage (page) {
+			}}
+			onGotoPage={function (page) {
 				help.hidden = true;
 				reader.gotoPage(page);
-			},
-			onToggleVisraam (value) {
+			}}
+			onToggleVisraam={function (value) {
 				config.showVisraam = value;
 				reader.showVisraam = value;
-			},
-		}));
+			}}
+		/>);
 
 		document.body.addEventListener('keyup', onKeyUp);
 	});
