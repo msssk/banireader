@@ -16,6 +16,7 @@ export interface ApiPageLine {
 }
 
 export type BaniLine = {
+	isHeading?: boolean;
 	lineNo: number;
 	pageNo: number;
 	shabadId: number;

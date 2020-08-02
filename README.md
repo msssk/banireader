@@ -1,15 +1,5 @@
 Bani Reader provides a clean view of bani intended for reading on a computer screen. Bani is loaded from the
-[SikhiToTheMax](https://www.sikhitothemax.org/) API. Currently only Google Chromium based browsers are known to have a
-text layout engine that works well.
-
-<details>
-	<summary>Why only Chrome?</summary>
-Bani Reader attempts to create an automated layout that is aesthetically pleasing. There is no layout information in
-the source data, and being an automated effort it does not work optimally in all cases, but overall it works
-reasonably well. It relies on a combination of the CSS property <code>whitespace: nowrap</code> and the
-<code>&lt;wbr></code> HTML element. Browsers are not consistent in the way they lay out text with this combination but
-Chrome does what I hoped it would when I imagined the approach while other browsers do not.
-</details>
+[SikhiToTheMax](https://www.sikhitothemax.org/) API.
 
 ## Using Bani Reader
 

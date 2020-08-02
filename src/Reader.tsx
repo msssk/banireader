@@ -27,12 +27,15 @@ const previousKeys = new Set([
 	'PageUp',
 ]);
 
-function withWordBreak (sum: string, line: BaniLine, index: number, array: BaniLine[]) {
-	if (index === array.length - 1 || line.text.endsWith('>')) {
-		sum += `${line.text}`;
+/**
+ * Insert space between lines, excepting heading lines (intended as array reducer)
+ */
+function withSpace (sum: string, line: BaniLine, index: number, array: BaniLine[]) {
+	if (index === array.length - 1 || line.isHeading) {
+		sum += line.text;
 	}
 	else {
-		sum += `${line.text}<wbr> `;
+		sum += `${line.text} `;
 	}
 
 	return sum;
@@ -165,7 +168,7 @@ export default function Reader (options: ReaderOptions) {
 		if (!pageHtml) {
 			const lines = await getNextPageLines();
 			if (lines.length) {
-				pageHtml = lines.reduce<string>(withWordBreak, '');
+				pageHtml = lines.reduce(withSpace, '');
 				config.renderedPages[pageIndex] = pageHtml;
 			}
 		}
@@ -174,17 +177,6 @@ export default function Reader (options: ReaderOptions) {
 		}
 	}
 
-	function reportUnsupportedBrowser () {
-		if (!/Chrome/.test(navigator.userAgent)) {
-			element.appendChild(<div class="unsupported">
-				This browser does not have the necessary text rendering support.
-				<br />
-				Please try <a href="https://www.google.com/chrome/">Google Chrome</a>
-			</div>);
-		}
-	}
-
-	let isFirstRender = true;
 	async function getNextPageLines () {
 		const lines = [];
 		let line;
@@ -194,15 +186,7 @@ export default function Reader (options: ReaderOptions) {
 
 			if (line) {
 				lines.push(line);
-				refs.sizingNode.innerHTML += `${line.text}<wbr> `;
-			}
-
-			// If the first render fails to fit it's probably because the browser is not correctly breaking on <wbr>
-			// If later renders fail it's... some unknown glitch?
-			if (isFirstRender && refs.sizingNode.offsetWidth > element.offsetWidth) {
-				reportUnsupportedBrowser();
-
-				return [];
+				refs.sizingNode.innerHTML += `${line.text} `;
 			}
 		} while (line && refs.sizingNode.offsetHeight <= element.offsetHeight);
 
@@ -216,7 +200,6 @@ export default function Reader (options: ReaderOptions) {
 			config.lineCache.unshift(lines.pop());
 		}
 
-		isFirstRender = false;
 		refs.sizingNode.innerHTML = '';
 
 		return lines;
@@ -234,23 +217,36 @@ export default function Reader (options: ReaderOptions) {
 		}, Object.create(null));
 
 		if (Object.keys(visraamMap).length) {
+			// a phrase is a group of words that should appear on the same line
+			let isStartOfPhrase = false;
+
 			line = line.split(' ').map((word, index) => {
+				const prefix = isStartOfPhrase ? '<span class="nowrap">' : '';
+				let result = prefix + word;
+
+				isStartOfPhrase = false;
+
 				if (visraamMap[index] === 'v') {
-					return `<span class="visraam-main">${word}</span><wbr>`;
+					result = `<span class="visraam-main">${word}</span></span>`;
+					isStartOfPhrase = true;
 				}
 				else if (visraamMap[index] === 'y') {
-					return `<span class="visraam-yamki">${word}</span>`;
+					result = `${prefix}<span class="visraam-yamki">${word}</span>`;
 				}
-				else {
-					return word;
-				}
+
+				return result;
 			}).join(' ');
 		}
 
+		let isHeading = false;
 		if (isHeadingLine || (apiLine.shabadId !== config.currentShabadId &&
 			!isContinuousShabad(config.currentShabadId, apiLine.shabadId, config.source))
 		) {
 			line = `<center>${line}</center>`;
+			isHeading = true;
+		}
+		else {
+			line = `<span class="nowrap">${line}</span>`;
 		}
 
 		if (config.currentShabadId !== apiLine.shabadId) {
@@ -259,6 +255,7 @@ export default function Reader (options: ReaderOptions) {
 
 		return {
 			text: line,
+			isHeading,
 			lineNo: apiLine.lineNo,
 			pageNo: apiLine.pageNo,
 			shabadId: apiLine.shabadId,

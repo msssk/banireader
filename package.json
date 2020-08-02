@@ -1,6 +1,6 @@
 {
 	"name": "banireader",
-	"version": "0.0.7",
+	"version": "0.0.8",
 	"description": "BaniReader simple reader",
 	"main": "src/index.html",
 	"scripts": {
@@ -32,12 +32,6 @@
 		"@typescript-eslint/parser": "^3.7.1",
 		"eslint": "^7.6.0",
 		"eslint-plugin-local": "^1.0.0",
-		"snowpack": "^2.7.5",
 		"typescript": "^3.9.7"
-	},
-	"snowpack": {
-		"scripts": {
-			"build:tsx": "esbuild --jsx-factory=tizi --jsx-fragment=Todo --loader=tsx"
-		}
 	}
 }
