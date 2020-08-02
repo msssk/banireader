@@ -1,5 +1,5 @@
 import { isContinuousShabad } from './bani.js';
-import { a, br, createRef, div, render, main, section, } from './tizi.js';
+import tizi, { createRef, } from './tizi.js';
 const TOTAL_PAGES = {
     G: 1430,
     D: 1428,
@@ -17,50 +17,48 @@ const previousKeys = new Set([
     'ArrowUp',
     'PageUp',
 ]);
-function withWordBreak(sum, line, index, array) {
-    if (index === array.length - 1 || line.text.endsWith('>')) {
-        sum += `${line.text}`;
+function withSpace(sum, line, index, array) {
+    if (index === array.length - 1 || line.isHeading) {
+        sum += line.text;
     }
     else {
-        sum += `${line.text}<wbr> `;
+        sum += `${line.text} `;
     }
     return sum;
 }
-export default function Reader(options, children) {
-    const { config, ref, ...elementOptions } = options;
+export default function Reader(options) {
+    const { config, ...elementOptions } = options;
     const refs = {
-        main: createRef(),
         sizingNode: createRef(),
     };
-    const element = main({ ref: refs.main, class: 'reader', ...elementOptions }, [
-        section({ ref: refs.sizingNode, class: 'page' }),
-    ]);
-    const pageNodes = [];
-    for (let i = 0; i < MAX_RENDERED_PAGES; i++) {
-        pageNodes.push(refs.sizingNode.node.cloneNode());
-    }
-    render(element, options, children, {
+    const controller = {
         destroy() {
             document.body.removeEventListener('keyup', onKeyUp);
         },
         gotoPage,
         render: renderCurrentPage,
         get hidden() {
-            return element.hidden;
+            return this.element.hidden;
         },
         set hidden(value) {
-            element.hidden = value;
+            this.element.hidden = value;
             if (value === false) {
-                element.classList.toggle('visraam', Boolean(config.showVisraam));
+                this.element.classList.toggle('visraam', Boolean(config.showVisraam));
             }
         },
         get showVisraam() {
-            return element.classList.contains('visraam');
+            return this.element.classList.contains('visraam');
         },
         set showVisraam(value) {
-            element.classList.toggle('visraam', value);
+            this.element.classList.toggle('visraam', value);
         },
-    });
+    };
+    const element = tizi("main", Object.assign({}, elementOptions, { controller: controller, class: "reader" }),
+        tizi("section", { ref: refs.sizingNode, class: "page" }));
+    const pageNodes = [];
+    for (let i = 0; i < MAX_RENDERED_PAGES; i++) {
+        pageNodes.push(refs.sizingNode.element.cloneNode());
+    }
     let isNavigating = false;
     async function gotoNextPage() {
         if (isNavigating) {
@@ -104,7 +102,7 @@ export default function Reader(options, children) {
         if (!pageHtml) {
             const lines = await getNextPageLines();
             if (lines.length) {
-                pageHtml = lines.reduce(withWordBreak, '');
+                pageHtml = lines.reduce(withSpace, '');
                 config.renderedPages[pageIndex] = pageHtml;
             }
         }
@@ -112,17 +110,6 @@ export default function Reader(options, children) {
             pageNodes[pageIndex].innerHTML = pageHtml;
         }
     }
-    function reportUnsupportedBrowser() {
-        if (!/Chrome/.test(navigator.userAgent)) {
-            element.appendChild(div({ class: 'unsupported' }, [
-                'This browser does not have the necessary text rendering support.',
-                br(),
-                'Please try ',
-                a({ href: 'https://www.google.com/chrome/' }, 'Google Chrome'),
-            ]));
-        }
-    }
-    let isFirstRender = true;
     async function getNextPageLines() {
         const lines = [];
         let line;
@@ -130,11 +117,7 @@ export default function Reader(options, children) {
             line = await getNextLine();
             if (line) {
                 lines.push(line);
-                refs.sizingNode.innerHTML += `${line.text}<wbr> `;
-            }
-            if (isFirstRender && refs.sizingNode.offsetWidth > element.offsetWidth) {
-                reportUnsupportedBrowser();
-                return [];
+                refs.sizingNode.innerHTML += `${line.text} `;
             }
         } while (line && refs.sizingNode.offsetHeight <= element.offsetHeight);
         if (refs.sizingNode.offsetHeight > element.offsetHeight) {
@@ -143,7 +126,6 @@ export default function Reader(options, children) {
         if (lines.length > 1 && lines.last.shabadId !== lines[lines.length - 2].shabadId) {
             config.lineCache.unshift(lines.pop());
         }
-        isFirstRender = false;
         refs.sizingNode.innerHTML = '';
         return lines;
     }
@@ -156,27 +138,36 @@ export default function Reader(options, children) {
             return sum;
         }, Object.create(null));
         if (Object.keys(visraamMap).length) {
+            let isStartOfPhrase = false;
             line = line.split(' ').map((word, index) => {
+                const prefix = isStartOfPhrase ? '<span class="nowrap">' : '';
+                let result = prefix + word;
+                isStartOfPhrase = false;
                 if (visraamMap[index] === 'v') {
-                    return `<span class="visraam-main">${word}</span><wbr>`;
+                    result = `<span class="visraam-main">${word}</span></span>`;
+                    isStartOfPhrase = true;
                 }
                 else if (visraamMap[index] === 'y') {
-                    return `<span class="visraam-yamki">${word}</span>`;
+                    result = `${prefix}<span class="visraam-yamki">${word}</span>`;
                 }
-                else {
-                    return word;
-                }
+                return result;
             }).join(' ');
         }
+        let isHeading = false;
         if (isHeadingLine || (apiLine.shabadId !== config.currentShabadId &&
             !isContinuousShabad(config.currentShabadId, apiLine.shabadId, config.source))) {
             line = `<center>${line}</center>`;
+            isHeading = true;
+        }
+        else {
+            line = `<span class="nowrap">${line}</span>`;
         }
         if (config.currentShabadId !== apiLine.shabadId) {
             config.currentShabadId = apiLine.shabadId;
         }
         return {
             text: line,
+            isHeading,
             lineNo: apiLine.lineNo,
             pageNo: apiLine.pageNo,
             shabadId: apiLine.shabadId,

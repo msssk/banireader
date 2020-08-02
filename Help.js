@@ -1,9 +1,9 @@
 import { adjustLightness, getLightnessRange } from './util/color.js';
 import { defaultColors } from './Config.js';
-import { createRef, render, br, button, div, hr, input, kbd, label, table, td, tr, } from './tizi.js';
+import tizi, { createRef, } from './tizi.js';
 function noop() { }
-export default function Help(options, children) {
-    const { config, onChangeBackgroundColor = noop, onChangeTextColor = noop, onChangeVisraamColor = noop, onChangeVisraamColorYamki = noop, onGotoPage = noop, onToggleVisraam = noop, ref, ...elementOptions } = options;
+export default function Help(options) {
+    const { config, onChangeBackgroundColor = noop, onChangeTextColor = noop, onChangeVisraamColor = noop, onChangeVisraamColorYamki = noop, onGotoPage = noop, onToggleVisraam = noop, ...elementOptions } = options;
     const refs = {
         darknessRangeInput: createRef(),
         textColorInput: createRef(),
@@ -35,19 +35,19 @@ export default function Help(options, children) {
     rangeOptions.step = rangeOptions.max / 100;
     function onInput(event) {
         const target = event.target;
-        if (target === refs.textColorInput.node) {
+        if (target === refs.textColorInput.element) {
             onChangeTextColor(refs.textColorInput.value);
         }
-        else if (target === refs.backgroundColorInput.node) {
+        else if (target === refs.backgroundColorInput.element) {
             onChangeBackgroundColor(refs.backgroundColorInput.value);
         }
-        else if (target === refs.visraamColorInput.node) {
+        else if (target === refs.visraamColorInput.element) {
             onChangeVisraamColor(refs.visraamColorInput.value);
         }
-        else if (target === refs.visraamColorYamkiInput.node) {
+        else if (target === refs.visraamColorYamkiInput.element) {
             onChangeVisraamColorYamki(refs.visraamColorYamkiInput.value);
         }
-        else if (target === refs.darknessRangeInput.node) {
+        else if (target === refs.darknessRangeInput.element) {
             const lightnessDelta = refs.darknessRangeInput.valueAsNumber - lightnessRange.min;
             onChangeBackgroundColor(adjustLightness(initialColors.backgroundColor, lightnessDelta));
             onChangeTextColor(adjustLightness(initialColors.textColor, lightnessDelta));
@@ -79,97 +79,16 @@ export default function Help(options, children) {
         onGotoPage(page);
         refs.gotoPageInput.value = '';
     }
-    const element = div({ ...elementOptions, class: 'help', onInput }, [
-        table({ class: 'infoTable' }, [
-            tr([
-                td('Next page'),
-                td([kbd('Space'), ' ', kbd('►'), ' ', kbd('▼'), ' ', kbd('Page Down')]),
-            ]),
-            tr([
-                td('Previous page'),
-                td([kbd('◄'), ' ', kbd('▲'), ' ', kbd('Page Up')]),
-            ]),
-            tr([
-                td(['Increase/decrease', br(), 'font size']),
-                td([kbd('+'), ' / ', kbd('-')]),
-            ]),
-        ]),
-        div({ class: 'column' }, [
-            div({ class: 'row' }, [
-                'Dark',
-                input({
-                    ref: refs.darknessRangeInput,
-                    type: 'range',
-                    class: 'darknessRangeInput',
-                    ...rangeOptions,
-                }),
-                'Light',
-            ]),
-            div({ class: 'row' }, [
-                div({ class: 'column colorControls' }, [
-                    label([
-                        input({
-                            ref: refs.textColorInput,
-                            type: 'color',
-                            value: config.textColor,
-                        }),
-                        ' Text color',
-                    ]),
-                    label([
-                        input({
-                            ref: refs.backgroundColorInput,
-                            type: 'color',
-                            value: config.backgroundColor,
-                        }),
-                        ' Background color',
-                    ]),
-                    label([
-                        input({
-                            ref: refs.visraamColorInput,
-                            type: 'color',
-                            value: config.visraamColor,
-                        }),
-                        ' Visraam color',
-                    ]),
-                    label([
-                        input({
-                            ref: refs.visraamColorYamkiInput,
-                            type: 'color',
-                            value: config.visraamColorYamki,
-                        }),
-                        ' Visraam secondary color',
-                    ]),
-                ]),
-                div({ class: 'column colorButtons' }, [
-                    button({ ref: refs.resetButton, class: 'buttonSecondary', onClick: resetColors }, 'Reset'),
-                    button({ ref: refs.saveColorsButton, onClick: saveColors }, 'Save'),
-                ]),
-            ]),
-        ]),
-        hr(),
-        label([
-            input({ ref: refs.visraamCheckbox, type: 'checkbox', onClick: toggleVisraam }),
-            'Show visraam',
-        ]),
-        div([
-            label([
-                'Go to page: ',
-                input({ ref: refs.gotoPageInput, type: 'number' }),
-            ]),
-            ' ',
-            button({ type: 'button', onClick: onClickGotoPage }, 'Go'),
-        ]),
-    ]);
-    render(element, options, children, {
+    const controller = {
         destroy() {
-            element.removeEventListener('input', onInput);
-            element.remove();
+            this.element.removeEventListener('input', onInput);
+            this.element.remove();
         },
         get hidden() {
-            return element.hidden;
+            return this.element.hidden;
         },
         set hidden(value) {
-            element.hidden = value;
+            this.element.hidden = value;
             if (value === false) {
                 refs.visraamCheckbox.checked = Boolean(config.showVisraam);
                 refs.gotoPageInput.placeholder = String(config.currentPage);
@@ -200,6 +119,65 @@ export default function Help(options, children) {
         set visraamColorYamki(value) {
             refs.visraamColorYamkiInput.value = value;
         },
-    });
-    return element;
+    };
+    return tizi("div", Object.assign({}, elementOptions, { class: "help", onInput: onInput, controller: controller }),
+        tizi("table", { class: "infoTable" },
+            tizi("tr", null,
+                tizi("td", null, "Next page"),
+                tizi("td", null,
+                    tizi("kbd", null, "Space"),
+                    " ",
+                    tizi("kbd", null, "\u25BA"),
+                    " ",
+                    tizi("kbd", null, "\u25BC"),
+                    " ",
+                    tizi("kbd", null, "Page Down"))),
+            tizi("tr", null,
+                tizi("td", null, "Previous page"),
+                tizi("td", null,
+                    tizi("kbd", null, "\u25C4"),
+                    " ",
+                    tizi("kbd", null, "\u25B2"),
+                    " ",
+                    tizi("kbd", null, "Page Up"))),
+            tizi("tr", null,
+                tizi("td", null,
+                    "Increase/decrease",
+                    tizi("br", null),
+                    "font size"),
+                tizi("td", null,
+                    tizi("kbd", null, "+"),
+                    " / ",
+                    tizi("kbd", null, "-")))),
+        tizi("div", { class: "column" },
+            tizi("div", { class: "row" },
+                "Dark",
+                tizi("input", Object.assign({ ref: refs.darknessRangeInput, class: "darknessRangeInput", type: "range" }, rangeOptions)),
+                "Light"),
+            tizi("div", { class: "row" },
+                tizi("div", { class: "column colorControls" },
+                    tizi("label", null,
+                        tizi("input", { ref: refs.textColorInput, type: "color", value: config.textColor }),
+                        "Text color"),
+                    tizi("label", null,
+                        tizi("input", { ref: refs.backgroundColorInput, type: "color", value: config.backgroundColor }),
+                        "Background color"),
+                    tizi("label", null,
+                        tizi("input", { ref: refs.visraamColorInput, type: "color", value: config.visraamColor }),
+                        "Visraam color"),
+                    tizi("label", null,
+                        tizi("input", { ref: refs.visraamColorYamkiInput, type: "color", value: config.visraamColorYamki }),
+                        "Visraam secondary color")),
+                tizi("div", { class: "column colorButtons" },
+                    tizi("button", { ref: refs.resetButton, class: "buttonSecondary", onClick: resetColors }, "Reset"),
+                    tizi("button", { ref: refs.saveColorsButton, onClick: saveColors }, "Save")))),
+        tizi("hr", null),
+        tizi("label", null,
+            tizi("input", { ref: refs.visraamCheckbox, type: "checkbox", onClick: toggleVisraam }),
+            "Show visraam"),
+        tizi("div", null,
+            tizi("label", null,
+                "Go to page:",
+                tizi("input", { ref: refs.gotoPageInput, type: "number" }),
+                tizi("button", { type: "button", onClick: onClickGotoPage }, "Go"))));
 }

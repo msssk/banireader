@@ -1,29 +1,29 @@
-import { button, div, kbd, p, render, } from './tizi.js';
-export default function SourceSelection(options, children) {
-    const { onSelectSource, ref, ...elementOptions } = options;
-    const element = div({ ...elementOptions, class: 'sourceSelection' }, [
-        button({ 'data-source': 'G', class: 'source' }, 'ਸ੍ਰੀ ਗੁਰੂ ਗ੍ਰੰਥ ਸਾਹਿਬ ਜੀ'),
-        button({ 'data-source': 'D', class: 'source' }, 'ਸ੍ਰੀ ਦਸਮ ਗ੍ਰੰਥ ਸਾਹਿਬ ਜੀ'),
-        p(['Choose what you want to read; while reading press ', kbd('h'), ' for help']),
-    ]);
+import tizi from './tizi.js';
+export default function SourceSelection(options) {
+    const { onSelectSource, ...elementOptions } = options;
     function onClick(event) {
         const target = event.target;
         if (target.dataset.source) {
             onSelectSource && onSelectSource(target.dataset.source);
         }
     }
-    element.addEventListener('click', onClick);
-    render(element, options, children, {
+    const controller = {
         destroy() {
-            element.removeEventListener('click', onClick);
-            element.remove();
+            this.element.removeEventListener('click', onClick);
+            this.element.remove();
         },
         get hidden() {
-            return element.hidden;
+            return this.element.hidden;
         },
         set hidden(value) {
-            element.hidden = value;
+            this.element.hidden = value;
         },
-    });
-    return element;
+    };
+    return tizi("div", Object.assign({}, elementOptions, { class: "sourceSelection", controller: controller, onClick: onClick }),
+        tizi("button", { "data-source": "G", class: "source" }, "\u0A38\u0A4D\u0A30\u0A40 \u0A17\u0A41\u0A30\u0A42 \u0A17\u0A4D\u0A30\u0A70\u0A25 \u0A38\u0A3E\u0A39\u0A3F\u0A2C \u0A1C\u0A40"),
+        tizi("button", { "data-source": "D", class: "source" }, "\u0A38\u0A4D\u0A30\u0A40 \u0A26\u0A38\u0A2E \u0A17\u0A4D\u0A30\u0A70\u0A25 \u0A38\u0A3E\u0A39\u0A3F\u0A2C \u0A1C\u0A40"),
+        tizi("p", null,
+            "Choose what you want to read; while reading press ",
+            tizi("kbd", null, "h"),
+            " for help"));
 }

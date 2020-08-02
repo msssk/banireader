@@ -1,7 +1,7 @@
 :root {
 	--element-margin: 8px;
 	--primary-font-size: 54px;
-	--primay-line-height: 63px;
+	--primary-line-height: 81px;
 	--table-border-color: #1d1b1b;
 
 	/* theme */
@@ -161,9 +161,13 @@ body {
 	font-family: 'GurbaniAkharHeavy';
 	font-size: var(--primary-font-size);
 	line-height: var(--primary-line-height);
-	white-space: nowrap;
 	height: 100%;
 	width: 100%;
+}
+
+.nowrap {
+	display: inline-block;
+	white-space: nowrap;
 }
 
 .nocursor .reader {

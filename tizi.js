@@ -1,10 +1,21 @@
+const emptyObject = Object.freeze(Object.create(null));
 export const RefElementSymbol = Symbol('RefElementSymbol');
 export const RefControllerSymbol = Symbol('RefControllerSymbol');
+const RefPrototype = Object.create(null, {
+    clone: {
+        configurable: false,
+        enumerable: true,
+        writable: false,
+        value: function (ref) {
+            this[RefElementSymbol] = ref[RefElementSymbol];
+        },
+    },
+});
 export function createRef() {
-    const ref = Object.create(null);
+    const ref = Object.create(RefPrototype);
     return new Proxy(ref, {
         get(target, key) {
-            if (key === RefElementSymbol || key === 'node') {
+            if (key === RefElementSymbol || key === 'element') {
                 return target[RefElementSymbol];
             }
             else {
@@ -16,7 +27,7 @@ export function createRef() {
             }
         },
         set(target, key, value) {
-            if (key === 'node') {
+            if (key === 'element') {
                 return false;
             }
             if (key === RefElementSymbol) {
@@ -30,13 +41,30 @@ export function createRef() {
     });
 }
 const ComponentRefPrototype = Object.create(null, {
+    clone: {
+        configurable: false,
+        enumerable: true,
+        writable: false,
+        value: function (ref) {
+            RefPrototype.clone(ref);
+            this[RefControllerSymbol] = ref[RefControllerSymbol];
+        },
+    },
     control: {
         configurable: false,
         enumerable: true,
         writable: false,
         value: function control(element, controller) {
+            if (controller) {
+                Object.defineProperty(controller, 'element', {
+                    configurable: false,
+                    enumerable: true,
+                    writable: false,
+                    value: element,
+                });
+            }
             this[RefElementSymbol] = element;
-            this[RefControllerSymbol] = controller || Object.create(null);
+            this[RefControllerSymbol] = controller || emptyObject;
         },
     },
 });
@@ -47,7 +75,7 @@ export function createComponentRef() {
             if (property === 'element') {
                 return target[RefElementSymbol];
             }
-            else if (property === 'control') {
+            else if (property === 'clone' || property === 'control') {
                 return target[property];
             }
             else {
@@ -55,7 +83,7 @@ export function createComponentRef() {
             }
         },
         set(target, property, value) {
-            if (property === 'control' || property === 'element') {
+            if (property === 'clone' || property === 'control' || property === 'element') {
                 return false;
             }
             if (property === RefControllerSymbol || property === RefElementSymbol) {
@@ -68,9 +96,8 @@ export function createComponentRef() {
         },
     });
 }
-const emptyObject = Object.freeze(Object.create(null));
 const eventHandlerRegex = /^on[A-Z][a-zA-Z]+$/;
-function applyOptions(node, options) {
+function applyOptions(element, options) {
     Object.keys(options).forEach(function (key) {
         const value = options[key];
         if (eventHandlerRegex.test(key)) {
@@ -78,13 +105,13 @@ function applyOptions(node, options) {
                 value :
                 [value]);
             const eventName = key.slice(2).toLowerCase();
-            node.addEventListener(eventName, eventListener, eventListenerOptions);
+            element.addEventListener(eventName, eventListener, eventListenerOptions);
         }
-        else if (node.setAttribute && typeof value === 'string') {
-            node.setAttribute(key, value);
+        else if (element.setAttribute && typeof value === 'string') {
+            element.setAttribute(key, value);
         }
         else {
-            node[key] = value;
+            element[key] = value;
         }
     });
 }
@@ -104,10 +131,10 @@ export function render(element, options, children, controller) {
         options = emptyObject;
     }
     const { ref, ...elementOptions } = options;
-    if (elementOptions) {
+    if (elementOptions && element.nodeType === element.ELEMENT_NODE) {
         applyOptions(element, elementOptions);
     }
-    if (ref) {
+    if (ref && element.nodeType === element.ELEMENT_NODE) {
         if ('control' in ref) {
             ref.control(element, controller);
         }
@@ -120,11 +147,26 @@ export function render(element, options, children, controller) {
             children = [children];
         }
         children.forEach(function (child) {
+            if (!child) {
+                return;
+            }
             if (typeof child === 'string') {
                 child = document.createTextNode(child);
             }
             element.appendChild(child);
         });
+    }
+    return element;
+}
+export default function tizi(tagName, options, ...children) {
+    const { controller, ...elementOptions } = (options || emptyObject);
+    let element;
+    if (typeof tagName === 'string') {
+        element = document.createElement(tagName);
+        render(element, elementOptions, children, controller);
+    }
+    else {
+        element = tagName(options, children);
     }
     return element;
 }
@@ -134,9 +176,10 @@ function factory(tagName) {
             children = options;
             options = emptyObject;
         }
-        const element = document.createElement(tagName);
-        render(element, options, children);
-        return element;
+        if (!Array.isArray(children)) {
+            children = [children];
+        }
+        return tizi(tagName, options, ...children);
     };
 }
 export const a = factory('a');
@@ -154,19 +197,3 @@ export const span = factory('span');
 export const table = factory('table');
 export const td = factory('td');
 export const tr = factory('tr');
-export default {
-    br,
-    button,
-    div,
-    hr,
-    input,
-    kbd,
-    label,
-    main,
-    p,
-    section,
-    span,
-    table,
-    td,
-    tr,
-};

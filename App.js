@@ -1,7 +1,7 @@
 import createConfig from './Config.js';
 import Help from './Help.js';
 import Reader from './Reader.js';
-import { createComponentRef } from './tizi.js';
+import tizi, { createComponentRef } from './tizi.js';
 import SourceSelection from './SourceSelection.js';
 const CSS_LINE_HEIGHT = 1.5;
 function getFontSize() {
@@ -22,38 +22,24 @@ export default function App() {
         reader.hidden = false;
         reader.render();
     }
-    document.body.appendChild(SourceSelection({ ref: sourceSelection, onSelectSource }));
+    document.body.appendChild(tizi(SourceSelection, { ref: sourceSelection, onSelectSource: onSelectSource }));
     requestAnimationFrame(function () {
-        document.body.appendChild(Reader({
-            config,
-            hidden: true,
-            ref: reader,
-        }));
-        document.body.appendChild(Help({
-            config,
-            hidden: true,
-            ref: help,
-            onChangeTextColor(value) {
+        document.body.appendChild(tizi(Reader, { ref: reader, config: config, hidden: true }));
+        document.body.appendChild(tizi(Help, { ref: help, config: config, hidden: true, onChangeTextColor: function (value) {
                 document.documentElement.style.setProperty("--text-color", value);
-            },
-            onChangeBackgroundColor(value) {
+            }, onChangeBackgroundColor: function (value) {
                 document.documentElement.style.setProperty("--background-color", value);
-            },
-            onChangeVisraamColor(value) {
+            }, onChangeVisraamColor: function (value) {
                 document.documentElement.style.setProperty("--visraam-color-main", value);
-            },
-            onChangeVisraamColorYamki(value) {
+            }, onChangeVisraamColorYamki: function (value) {
                 document.documentElement.style.setProperty("--visraam-color-yamki", value);
-            },
-            onGotoPage(page) {
+            }, onGotoPage: function (page) {
                 help.hidden = true;
                 reader.gotoPage(page);
-            },
-            onToggleVisraam(value) {
+            }, onToggleVisraam: function (value) {
                 config.showVisraam = value;
                 reader.showVisraam = value;
-            },
-        }));
+            } }));
         document.body.addEventListener('keyup', onKeyUp);
     });
     function onKeyUp(event) {
