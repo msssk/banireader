@@ -25,6 +25,7 @@ export interface HelpOptions extends ComponentOptions<HTMLDivElement, HelpContro
 	onChangeVisraamColor?(value: string): void;
 	onChangeVisraamColorYamki?(value: string): void;
 	onGotoPage?(page: number): void;
+	onTogglePageNumber?(value: boolean): void;
 	onToggleVisraam?(value: boolean): void;
 }
 
@@ -36,6 +37,7 @@ export default function Help (options: HelpOptions) {
 		onChangeVisraamColor = noop,
 		onChangeVisraamColorYamki = noop,
 		onGotoPage = noop,
+		onTogglePageNumber = noop,
 		onToggleVisraam = noop,
 		...elementOptions
 	} = options;
@@ -47,6 +49,7 @@ export default function Help (options: HelpOptions) {
 		visraamColorInput: createRef<HTMLInputElement>(),
 		visraamColorYamkiInput: createRef<HTMLInputElement>(),
 		visraamCheckbox: createRef<HTMLInputElement>(),
+		pageNumberCheckbox: createRef<HTMLInputElement>(),
 		resetButton: createRef<HTMLInputElement>(),
 		saveColorsButton: createRef<HTMLInputElement>(),
 		gotoPageInput: createRef<HTMLInputElement>(),
@@ -118,6 +121,10 @@ export default function Help (options: HelpOptions) {
 		onToggleVisraam(refs.visraamCheckbox.checked);
 	}
 
+	function togglePageNumber () {
+		onTogglePageNumber(refs.pageNumberCheckbox.checked);
+	}
+
 	function onClickGotoPage () {
 		const page = parseInt(refs.gotoPageInput.value, 10);
 		onGotoPage(page);
@@ -138,7 +145,8 @@ export default function Help (options: HelpOptions) {
 			this.element.hidden = value;
 
 			if (value === false) {
-				refs.visraamCheckbox.checked = Boolean(config.showVisraam);
+				refs.visraamCheckbox.checked = config.showVisraam;
+				refs.pageNumberCheckbox.checked = config.showPageNumber;
 				refs.gotoPageInput.placeholder = String(config.currentPage);
 				refs.gotoPageInput.focus();
 			}
@@ -236,11 +244,15 @@ export default function Help (options: HelpOptions) {
 			Show visraam
 		</label>
 
+		<label>
+			<input ref={refs.pageNumberCheckbox} type="checkbox" onClick={togglePageNumber} />
+			Show page number
+		</label>
+
 		<div>
 			<label>
-				Go to page:
-				<input ref={refs.gotoPageInput} type="number" />
-				<button type="button" onClick={onClickGotoPage}>Go</button>
+				Go to page: <input ref={refs.gotoPageInput} type="number" />
+				<button class="gotoPageButton" type="button" onClick={onClickGotoPage}>Go</button>
 			</label>
 		</div>
 	</div>;

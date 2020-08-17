@@ -17,6 +17,7 @@ export interface ApiPageLine {
 
 export type BaniLine = {
 	isHeading?: boolean;
+	isPageSeparator?: boolean;
 	lineNo: number;
 	pageNo: number;
 	shabadId: number;
@@ -52,11 +53,14 @@ export interface BaniSourceData {
 	 */
 	lineCache?: BaniLine[];
 
+	nextPageToFetch?: number;
+
 	/**
 	 * Inner HTML of currently rendered pages (up to 3)
 	 */
 	renderedPages?: Array<string | null>;
 
+	showPageNumber?: boolean;
 	showVisraam?: boolean;
 }
 

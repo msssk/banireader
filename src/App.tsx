@@ -60,6 +60,10 @@ export default function App () {
 				help.hidden = true;
 				reader.gotoPage(page);
 			}}
+			onTogglePageNumber={function (value) {
+				config.showPageNumber = value;
+				reader.showPageNumber = value;
+			}}
 			onToggleVisraam={function (value) {
 				config.showVisraam = value;
 				reader.showVisraam = value;
