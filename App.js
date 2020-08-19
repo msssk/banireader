@@ -36,6 +36,9 @@ export default function App() {
             }, onGotoPage: function (page) {
                 help.hidden = true;
                 reader.gotoPage(page);
+            }, onTogglePageNumber: function (value) {
+                config.showPageNumber = value;
+                reader.showPageNumber = value;
             }, onToggleVisraam: function (value) {
                 config.showVisraam = value;
                 reader.showVisraam = value;

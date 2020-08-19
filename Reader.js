@@ -17,8 +17,14 @@ const previousKeys = new Set([
     'ArrowUp',
     'PageUp',
 ]);
+function getPageSeparatorHtml(pageNumber) {
+    return `<div class="pageSeparator" data-page-number="${pageNumber}"></div>`;
+}
 function withSpace(sum, line, index, array) {
-    if (index === array.length - 1 || line.isHeading) {
+    if (line.isPageSeparator) {
+        sum += getPageSeparatorHtml(line.pageNo);
+    }
+    else if (index === array.length - 1 || line.isHeading) {
         sum += line.text;
     }
     else {
@@ -43,8 +49,15 @@ export default function Reader(options) {
         set hidden(value) {
             this.element.hidden = value;
             if (value === false) {
-                this.element.classList.toggle('visraam', Boolean(config.showVisraam));
+                this.element.classList.toggle('showPageNumber', config.showPageNumber);
+                this.element.classList.toggle('visraam', config.showVisraam);
             }
+        },
+        get showPageNumber() {
+            return this.element.classList.contains('showPageNumber');
+        },
+        set showPageNumber(value) {
+            this.element.classList.toggle('showPageNumber', value);
         },
         get showVisraam() {
             return this.element.classList.contains('visraam');
@@ -103,6 +116,8 @@ export default function Reader(options) {
             const lines = await getNextPageLines();
             if (lines.length) {
                 pageHtml = lines.reduce(withSpace, '');
+                pageHtml += `<div class="pageNumber">${lines.last.pageNo}</div>`;
+                config.currentPage = lines.last.pageNo;
                 config.renderedPages[pageIndex] = pageHtml;
             }
         }
@@ -117,7 +132,12 @@ export default function Reader(options) {
             line = await getNextLine();
             if (line) {
                 lines.push(line);
-                refs.sizingNode.innerHTML += `${line.text} `;
+                if (line.isPageSeparator) {
+                    refs.sizingNode.innerHTML += getPageSeparatorHtml(line.pageNo);
+                }
+                else {
+                    refs.sizingNode.innerHTML += `${line.text} `;
+                }
             }
         } while (line && refs.sizingNode.offsetHeight <= element.offsetHeight);
         if (refs.sizingNode.offsetHeight > element.offsetHeight) {
@@ -139,54 +159,64 @@ export default function Reader(options) {
         }, Object.create(null));
         if (Object.keys(visraamMap).length) {
             let isStartOfPhrase = false;
-            line = line.split(' ').map((word, index) => {
+            line = line.split(' ').map((word, wordIndex) => {
                 const prefix = isStartOfPhrase ? '<span class="nowrap">' : '';
                 let result = prefix + word;
                 isStartOfPhrase = false;
-                if (visraamMap[index] === 'v') {
+                if (visraamMap[wordIndex] === 'v') {
                     result = `<span class="visraam-main">${word}</span></span>`;
                     isStartOfPhrase = true;
                 }
-                else if (visraamMap[index] === 'y') {
+                else if (visraamMap[wordIndex] === 'y') {
                     result = `${prefix}<span class="visraam-yamki">${word}</span>`;
                 }
                 return result;
             }).join(' ');
         }
+        const { lineNo, pageNo, shabadId, verseId, } = apiLine;
         let isHeading = false;
-        if (isHeadingLine || (apiLine.shabadId !== config.currentShabadId &&
-            !isContinuousShabad(config.currentShabadId, apiLine.shabadId, config.source))) {
+        if (isHeadingLine || (shabadId !== config.currentShabadId &&
+            !isContinuousShabad(config.currentShabadId, shabadId, config.source))) {
             line = `<center>${line}</center>`;
             isHeading = true;
         }
         else {
             line = `<span class="nowrap">${line}</span>`;
         }
-        if (config.currentShabadId !== apiLine.shabadId) {
-            config.currentShabadId = apiLine.shabadId;
+        if (config.currentShabadId !== shabadId) {
+            config.currentShabadId = shabadId;
         }
         return {
             text: line,
             isHeading,
-            lineNo: apiLine.lineNo,
-            pageNo: apiLine.pageNo,
-            shabadId: apiLine.shabadId,
-            verseId: apiLine.verseId,
+            lineNo,
+            pageNo,
+            shabadId,
+            verseId,
         };
     }
     async function getNextLine() {
         if (!config.lineCache.length) {
             const pageInfo = await getNextPage();
             config.lineCache = pageInfo.page.map(parseApiLine);
+            const { lineNo, pageNo, shabadId, verseId, } = pageInfo.page[0];
+            config.lineCache.push({
+                text: '',
+                isPageSeparator: true,
+                lineNo,
+                pageNo: pageNo + 1,
+                shabadId,
+                verseId,
+            });
         }
         return config.lineCache.shift();
     }
     async function getNextPage() {
-        if (config.currentPage > TOTAL_PAGES[config.source]) {
+        if (config.nextPageToFetch > TOTAL_PAGES[config.source]) {
             return Promise.resolve({ page: [] });
         }
-        const apiResponse = await fetch(`https://api.banidb.com/v2/angs/${config.currentPage}/${config.source}`);
-        config.currentPage += 1;
+        const apiResponse = await fetch(`https://api.banidb.com/v2/angs/${config.nextPageToFetch}/${config.source}`);
+        config.nextPageToFetch += 1;
         return apiResponse.json();
     }
     async function renderCurrentPage() {
@@ -202,7 +232,7 @@ export default function Reader(options) {
         config.activeRenderedPage = 0;
         config.lineCache = [];
         config.renderedPages = [];
-        config.currentPage = pageNumber;
+        config.nextPageToFetch = pageNumber;
         config.currentShabadId = INVALID_SHABAD_ID;
         renderCurrentPage();
     }

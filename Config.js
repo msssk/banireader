@@ -24,8 +24,11 @@ export default function createConfig(options) {
             renderedPages: createArrayProxy([]),
         });
     });
-    const dataJson = localStorage.getItem(options.storageKey);
-    Object.assign(config, JSON.parse(dataJson || '{}'));
+    const data = JSON.parse(localStorage.getItem(options.storageKey) || '{}');
+    if ('currentPage' in data && !('nextPageToFetch' in data)) {
+        data.nextPageToFetch = data.currentPage;
+    }
+    Object.assign(config, data);
     let storagePending = false;
     function saveToStorage() {
         if (!storagePending) {

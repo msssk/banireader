@@ -3,7 +3,7 @@ import { defaultColors } from './Config.js';
 import tizi, { createRef, } from './tizi.js';
 function noop() { }
 export default function Help(options) {
-    const { config, onChangeBackgroundColor = noop, onChangeTextColor = noop, onChangeVisraamColor = noop, onChangeVisraamColorYamki = noop, onGotoPage = noop, onToggleVisraam = noop, ...elementOptions } = options;
+    const { config, onChangeBackgroundColor = noop, onChangeTextColor = noop, onChangeVisraamColor = noop, onChangeVisraamColorYamki = noop, onGotoPage = noop, onTogglePageNumber = noop, onToggleVisraam = noop, ...elementOptions } = options;
     const refs = {
         darknessRangeInput: createRef(),
         textColorInput: createRef(),
@@ -11,6 +11,7 @@ export default function Help(options) {
         visraamColorInput: createRef(),
         visraamColorYamkiInput: createRef(),
         visraamCheckbox: createRef(),
+        pageNumberCheckbox: createRef(),
         resetButton: createRef(),
         saveColorsButton: createRef(),
         gotoPageInput: createRef(),
@@ -74,6 +75,9 @@ export default function Help(options) {
     function toggleVisraam() {
         onToggleVisraam(refs.visraamCheckbox.checked);
     }
+    function togglePageNumber() {
+        onTogglePageNumber(refs.pageNumberCheckbox.checked);
+    }
     function onClickGotoPage() {
         const page = parseInt(refs.gotoPageInput.value, 10);
         onGotoPage(page);
@@ -90,7 +94,8 @@ export default function Help(options) {
         set hidden(value) {
             this.element.hidden = value;
             if (value === false) {
-                refs.visraamCheckbox.checked = Boolean(config.showVisraam);
+                refs.visraamCheckbox.checked = config.showVisraam;
+                refs.pageNumberCheckbox.checked = config.showPageNumber;
                 refs.gotoPageInput.placeholder = String(config.currentPage);
                 refs.gotoPageInput.focus();
             }
@@ -175,9 +180,12 @@ export default function Help(options) {
         tizi("label", null,
             tizi("input", { ref: refs.visraamCheckbox, type: "checkbox", onClick: toggleVisraam }),
             "Show visraam"),
+        tizi("label", null,
+            tizi("input", { ref: refs.pageNumberCheckbox, type: "checkbox", onClick: togglePageNumber }),
+            "Show page number"),
         tizi("div", null,
             tizi("label", null,
-                "Go to page:",
+                "Go to page: ",
                 tizi("input", { ref: refs.gotoPageInput, type: "number" }),
-                tizi("button", { type: "button", onClick: onClickGotoPage }, "Go"))));
+                tizi("button", { class: "gotoPageButton", type: "button", onClick: onClickGotoPage }, "Go"))));
 }
