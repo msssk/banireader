@@ -25,9 +25,6 @@ export default function createConfig(options) {
         });
     });
     const data = JSON.parse(localStorage.getItem(options.storageKey) || '{}');
-    if ('currentPage' in data && !('nextPageToFetch' in data)) {
-        data.nextPageToFetch = data.currentPage;
-    }
     Object.assign(config, data);
     let storagePending = false;
     function saveToStorage() {
