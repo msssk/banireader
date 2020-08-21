@@ -144,9 +144,10 @@ export default function Reader (options: ReaderOptions) {
 			config.activeRenderedPage = 1;
 		}
 		else {
+			pageNodes.first.innerHTML = '';
 			pageNodes.push(pageNodes.shift());
-			config.renderedPages.push(config.renderedPages.shift());
-			config.renderedPages[2] = '';
+			config.renderedPages.shift();
+			config.renderedPages.push('');
 		}
 		const currentPageNode = pageNodes[config.activeRenderedPage];
 
@@ -185,6 +186,14 @@ export default function Reader (options: ReaderOptions) {
 		if (!pageHtml) {
 			const lines = await getNextPageLines();
 			if (lines.length) {
+				// omit displaying page separator at top or bottom of view
+				if (lines.first.isPageSeparator) {
+					lines.shift();
+				}
+				else if (lines.last.isPageSeparator) {
+					lines.pop();
+				}
+
 				pageHtml = lines.reduce(withSpace, '');
 				pageHtml += `<div class="pageNumber">${lines.last.pageNo}</div>`;
 				config.currentPage = lines.last.pageNo;
@@ -297,6 +306,9 @@ export default function Reader (options: ReaderOptions) {
 	async function getNextLine () {
 		if (!config.lineCache.length) {
 			const pageInfo = await getNextPage();
+			if (!pageInfo) {
+				return;
+			}
 			config.lineCache = pageInfo.page.map(parseApiLine);
 			const {
 				lineNo,
@@ -321,7 +333,7 @@ export default function Reader (options: ReaderOptions) {
 
 	async function getNextPage (): Promise<ApiPageInfo> {
 		if (config.nextPageToFetch > TOTAL_PAGES[config.source as keyof typeof TOTAL_PAGES]) {
-			return Promise.resolve({ page: [] });
+			return;
 		}
 
 		const apiResponse = await fetch(`https://api.banidb.com/v2/angs/${config.nextPageToFetch}/${config.source}`);

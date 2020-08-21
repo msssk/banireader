@@ -44,10 +44,6 @@ export default function createConfig (options: ConfigOptions): Config {
 	});
 
 	const data = JSON.parse(localStorage.getItem(options.storageKey) || '{}');
-	// TODO: temporary logic to transition old localStorage format to new format
-	if ('currentPage' in data && !('nextPageToFetch' in data)) {
-		data.nextPageToFetch = data.currentPage;
-	}
 	Object.assign(config, data);
 
 	let storagePending = false;

@@ -1,6 +1,6 @@
 {
 	"name": "banireader",
-	"version": "0.0.9",
+	"version": "0.0.10",
 	"description": "BaniReader simple reader",
 	"main": "src/index.html",
 	"scripts": {
