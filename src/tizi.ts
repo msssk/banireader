@@ -14,6 +14,7 @@
 /* eslint-disable max-len */
 
 declare global {
+	// eslint-disable-next-line @typescript-eslint/no-namespace
 	namespace JSX {
 		// TODO: all the elements
 		interface IntrinsicElements {
@@ -176,7 +177,7 @@ export function createComponentRef<C extends Controller<HTMLElement> = Controlle
 	const ref = Object.create(ComponentRefPrototype);
 
 	return new Proxy(ref, {
-		get (target, property: keyof C) {
+		get (target, property: string | symbol) {
 			if (property === 'element') {
 				return target[RefElementSymbol];
 			}
@@ -188,7 +189,7 @@ export function createComponentRef<C extends Controller<HTMLElement> = Controlle
 			}
 		},
 
-		set (target, property: keyof C, value: unknown) {
+		set (target, property: string | symbol, value: unknown) {
 			if (property === 'clone' || property === 'control' || property === 'element') {
 				return false;
 			}
