@@ -63,25 +63,3 @@ export interface BaniSourceData {
 	showPageNumber?: boolean;
 	showVisraam?: boolean;
 }
-
-declare global {
-	namespace JSX {
-		// TODO: all the elements
-		interface IntrinsicElements {
-			a: Record<string, unknown>;
-			br: Record<string, unknown>;
-			button: Record<string, unknown>;
-			div: Record<string, unknown>;
-			hr: Record<string, unknown>;
-			input: Record<string, unknown>;
-			kbd: Record<string, unknown>;
-			label: Record<string, unknown>;
-			main: Record<string, unknown>;
-			p: Record<string, unknown>;
-			section: Record<string, unknown>;
-			table: Record<string, unknown>;
-			td: Record<string, unknown>;
-			tr: Record<string, unknown>;
-		}
-	}
-}
