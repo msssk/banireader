@@ -125,7 +125,7 @@ export default function Help(options) {
             refs.visraamColorYamkiInput.value = value;
         },
     };
-    return tizi("div", Object.assign({}, elementOptions, { class: "help", onInput: onInput, controller: controller }),
+    return tizi("div", { ...elementOptions, class: "help", onInput: onInput, controller: controller },
         tizi("table", { class: "infoTable" },
             tizi("tr", null,
                 tizi("td", null, "Next page"),
@@ -157,7 +157,7 @@ export default function Help(options) {
         tizi("div", { class: "column" },
             tizi("div", { class: "row" },
                 "Dark",
-                tizi("input", Object.assign({ ref: refs.darknessRangeInput, class: "darknessRangeInput", type: "range" }, rangeOptions)),
+                tizi("input", { ref: refs.darknessRangeInput, class: "darknessRangeInput", type: "range", ...rangeOptions }),
                 "Light"),
             tizi("div", { class: "row" },
                 tizi("div", { class: "column colorControls" },

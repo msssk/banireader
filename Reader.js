@@ -66,7 +66,7 @@ export default function Reader(options) {
             this.element.classList.toggle('visraam', value);
         },
     };
-    const element = tizi("main", Object.assign({}, elementOptions, { controller: controller, class: "reader" }),
+    const element = tizi("main", { ...elementOptions, controller: controller, class: "reader" },
         tizi("section", { ref: refs.sizingNode, class: "page" }));
     const pageNodes = [];
     for (let i = 0; i < MAX_RENDERED_PAGES; i++) {
@@ -160,10 +160,11 @@ export default function Reader(options) {
     function parseApiLine(apiLine) {
         let line = apiLine.verse.gurmukhi;
         const isHeadingLine = line.startsWith(IkOngkar);
-        const visraamMap = apiLine.visraam.sttm.reduce((sum, { p, t }) => {
+        const visraamInfo = apiLine.visraam && (apiLine.visraam.sttm || apiLine.visraam.sttm2);
+        const visraamMap = visraamInfo ? visraamInfo.reduce((sum, { p, t }) => {
             sum[p] = t;
             return sum;
-        }, Object.create(null));
+        }, Object.create(null)) : {};
         if (Object.keys(visraamMap).length) {
             let isStartOfPhrase = false;
             line = line.split(' ').map((word, wordIndex) => {
