@@ -242,12 +242,13 @@ export default function Reader (options: ReaderOptions) {
 	function parseApiLine (apiLine: ApiPageLine): BaniLine {
 		let line = apiLine.verse.gurmukhi;
 		const isHeadingLine = line.startsWith(IkOngkar);
+		const visraamInfo = apiLine.visraam && (apiLine.visraam.sttm || apiLine.visraam.sttm2);
 
-		const visraamMap = apiLine.visraam.sttm.reduce((sum: Record<number, string>, { p, t }) => {
+		const visraamMap = visraamInfo ? visraamInfo.reduce((sum: Record<number, string>, { p, t }) => {
 			sum[p] = t;
 
 			return sum;
-		}, Object.create(null));
+		}, Object.create(null)) : {};
 
 		if (Object.keys(visraamMap).length) {
 			// a phrase is a group of words that should appear on the same line

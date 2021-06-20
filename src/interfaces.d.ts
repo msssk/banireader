@@ -11,7 +11,8 @@ export interface ApiPageLine {
 	};
 	verseId: number;
 	visraam: {
-		sttm: VisraamInfo[]
+		sttm?: VisraamInfo[],
+		sttm2?: VisraamInfo[]
 	}
 }
 
